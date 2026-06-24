@@ -21,21 +21,55 @@ import {
 import { listenPurchasesByPerfume } from '../services/purchasesService';
 import { createSale } from '../services/salesService';
 
-const today = new Date().toISOString().slice(0, 10);
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
 
-const initialForm = {
-  cliente_id: '',
-  perfume_id: '',
-  compra_ids: [],
-  tipo_producto: 'decant_3ml',
-  ml_vendidos: '3',
-  cantidad: '1',
-  precio_unitario: '',
-  pago_inicial: '',
-  metodo_pago: '',
-  fecha_venta: today,
-  notas: '',
-};
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(dateString, days) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + days);
+
+  return getLocalDateString(date);
+}
+
+function getWeekDays(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const selectedDate = new Date(year, month - 1, day);
+  const start = new Date(selectedDate);
+  const weekDay = start.getDay();
+  const daysFromMonday = weekDay === 0 ? 6 : weekDay - 1;
+  start.setDate(start.getDate() - daysFromMonday);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+
+    return getLocalDateString(date);
+  });
+}
+
+const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+function getInitialForm() {
+  return {
+    cliente_id: '',
+    perfume_id: '',
+    compra_ids: [],
+    tipo_producto: 'decant_3ml',
+    ml_vendidos: '3',
+    cantidad: '1',
+    precio_unitario: '',
+    pago_inicial: '',
+    metodo_pago: '',
+    fecha_venta: getLocalDateString(),
+    notas: '',
+  };
+}
 
 function getSuggestedPurchaseIds(purchases, mlNeeded) {
   let remainingMl = Number(mlNeeded) || 0;
@@ -68,7 +102,7 @@ export default function SaleFormScreen({ navigation }) {
   const [perfumes, setPerfumes] = useState([]);
   const [prices, setPrices] = useState([]);
   const [purchases, setPurchases] = useState([]);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(() => getInitialForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -214,7 +248,7 @@ export default function SaleFormScreen({ navigation }) {
         ...form,
         total,
       });
-      setForm(initialForm);
+      setForm(getInitialForm());
       navigation.navigate('Payments');
     } catch (firebaseError) {
       Alert.alert('No se pudo guardar la venta', firebaseError.message);
@@ -354,11 +388,9 @@ export default function SaleFormScreen({ navigation }) {
             onChangeText={(value) => updateField('metodo_pago', value)}
             placeholder="Efectivo, transferencia, tarjeta"
           />
-          <FormInput
-            label="Fecha de venta"
+          <DateSelector
             value={form.fecha_venta}
-            onChangeText={(value) => updateField('fecha_venta', value)}
-            placeholder="AAAA-MM-DD"
+            onChange={(value) => updateField('fecha_venta', value)}
           />
           <FormInput
             label="Notas"
@@ -375,6 +407,54 @@ export default function SaleFormScreen({ navigation }) {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function DateSelector({ value, onChange }) {
+  const weekDays = getWeekDays(value);
+
+  return (
+    <View style={styles.dateBox}>
+      <View style={styles.dateHeader}>
+        <View>
+          <Text style={styles.dateLabel}>Fecha de venta</Text>
+          <Text style={styles.dateValue}>{value}</Text>
+        </View>
+        <Pressable onPress={() => onChange(getLocalDateString())} style={styles.todayButton}>
+          <Text style={styles.todayButtonText}>Hoy</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.dateControls}>
+        <Pressable onPress={() => onChange(addDays(value, -1))} style={styles.dateStepButton}>
+          <Text style={styles.dateStepText}>Anterior</Text>
+        </Pressable>
+        <Pressable onPress={() => onChange(addDays(value, 1))} style={styles.dateStepButton}>
+          <Text style={styles.dateStepText}>Siguiente</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.weekRow}>
+        {weekDays.map((date, index) => {
+          const isSelected = date === value;
+
+          return (
+            <Pressable
+              key={date}
+              onPress={() => onChange(date)}
+              style={[styles.dayButton, isSelected && styles.dayButtonActive]}
+            >
+              <Text style={[styles.dayLabel, isSelected && styles.dayLabelActive]}>
+                {dayLabels[index]}
+              </Text>
+              <Text style={[styles.dayNumber, isSelected && styles.dayNumberActive]}>
+                {Number(date.slice(-2))}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -513,6 +593,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     marginTop: 10,
+  },
+  dateBox: {
+    backgroundColor: '#24252a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4f463b',
+    padding: 12,
+    marginBottom: 16,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  dateLabel: {
+    color: '#f0d19a',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  dateValue: {
+    color: '#f8f4ed',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  todayButton: {
+    minHeight: 38,
+    borderRadius: 8,
+    backgroundColor: '#d8ad62',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  todayButtonText: {
+    color: '#1f1f20',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  dateControls: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  dateStepButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 8,
+    backgroundColor: '#303133',
+    borderWidth: 1,
+    borderColor: '#4b4b4d',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateStepText: {
+    color: '#f8f4ed',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  dayButton: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: 8,
+    backgroundColor: '#303133',
+    borderWidth: 1,
+    borderColor: '#444446',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayButtonActive: {
+    backgroundColor: '#d8ad62',
+    borderColor: '#d8ad62',
+  },
+  dayLabel: {
+    color: '#c7c1b7',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  dayLabelActive: {
+    color: '#3a2a14',
+  },
+  dayNumber: {
+    color: '#f8f4ed',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  dayNumberActive: {
+    color: '#1f1f20',
   },
   emptyText: {
     color: '#c7c1b7',

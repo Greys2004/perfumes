@@ -20,6 +20,14 @@ const saleDetailsCollection = collection(db, 'detalle_venta');
 const paymentsCollection = collection(db, 'pagos');
 const inventoryMovementsCollection = collection(db, 'movimientos_inventario');
 
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 export function listenPendingSales(onSalesChange, onError) {
   const salesQuery = query(salesCollection, where('estado_pago', 'in', ['pendiente', 'parcial']));
 
@@ -299,7 +307,7 @@ export async function cancelSale(saleId) {
         tipo: 'entrada_cancelacion',
         ml: mlToRestore,
         referencia: saleId,
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: getLocalDateString(),
         notas: 'Stock restaurado por venta cancelada',
       });
 

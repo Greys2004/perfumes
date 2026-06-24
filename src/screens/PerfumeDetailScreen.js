@@ -26,7 +26,15 @@ import {
   updatePurchaseStock,
 } from '../services/purchasesService';
 
-const today = new Date().toISOString().slice(0, 10);
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+const today = getLocalDateString();
 
 const initialPriceForm = {
   id: '',
@@ -507,7 +515,7 @@ function InventoryPurchase({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: '#151518',
   },
   content: {
     padding: 18,
@@ -517,12 +525,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 14,
     marginBottom: 16,
+    backgroundColor: '#222329',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#34353a',
+    padding: 14,
   },
   bottleMark: {
     width: 68,
     height: 82,
     borderRadius: 8,
-    backgroundColor: '#d8ad62',
+    backgroundColor: '#d9ad69',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -565,27 +578,34 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   stockPanel: {
-    backgroundColor: '#d8ad62',
+    backgroundColor: '#24201c',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4d3e2b',
     padding: 18,
     marginBottom: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
   stockLabel: {
-    color: '#3a2a14',
+    color: '#d8c0a0',
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
   },
   stockValue: {
-    color: '#1f1f20',
+    color: '#f8f4ed',
     fontSize: 34,
     fontWeight: '900',
   },
   panel: {
-    backgroundColor: '#303133',
+    backgroundColor: '#222329',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#444446',
+    borderColor: '#34353a',
     padding: 16,
     marginBottom: 14,
   },
@@ -603,7 +623,7 @@ const styles = StyleSheet.create({
   },
   rowItem: {
     minHeight: 54,
-    backgroundColor: '#3b3b3d',
+    backgroundColor: '#2b2c31',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -616,7 +636,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   purchaseItem: {
-    backgroundColor: '#3b3b3d',
+    backgroundColor: '#2b2c31',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -680,7 +700,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   exhaustedItem: {
-    backgroundColor: '#2b2b2d',
+    backgroundColor: '#252329',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#4a3b3b',

@@ -16,7 +16,15 @@ import {
   updatePayment,
 } from '../services/salesService';
 
-const today = new Date().toISOString().slice(0, 10);
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+const today = getLocalDateString();
 
 export default function PaymentsScreen() {
   const [sales, setSales] = useState([]);
@@ -361,7 +369,7 @@ function BreakdownItem({ label, value, highlight = false }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: '#151518',
   },
   content: {
     padding: 18,
@@ -386,12 +394,17 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   panel: {
-    backgroundColor: '#303133',
+    backgroundColor: '#222329',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#444446',
+    borderColor: '#34353a',
     padding: 16,
     marginBottom: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   saleHeader: {
     flexDirection: 'row',
@@ -417,8 +430,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   badge: {
-    color: '#1f1f20',
-    backgroundColor: '#d8ad62',
+    color: '#1d1710',
+    backgroundColor: '#d9ad69',
     borderRadius: 8,
     overflow: 'hidden',
     paddingHorizontal: 10,
@@ -431,12 +444,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   breakdownItem: {
-    backgroundColor: '#3b3b3d',
+    backgroundColor: '#2b2c31',
     borderRadius: 8,
     padding: 12,
   },
   breakdownHighlight: {
-    backgroundColor: '#d8ad62',
+    backgroundColor: '#d9ad69',
   },
   breakdownLabel: {
     color: '#c7c1b7',
@@ -463,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   paymentRow: {
-    backgroundColor: '#3b3b3d',
+    backgroundColor: '#2b2c31',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,

@@ -32,10 +32,11 @@ export default function AppNavigator() {
     <NavigationContainer ref={setNavigationRef}>
       <Stack.Navigator
         screenOptions={({ navigation }) => ({
-          headerStyle: { backgroundColor: '#242527' },
+          headerStyle: { backgroundColor: '#18191c' },
           headerTintColor: '#f8f4ed',
-          headerTitleStyle: { fontWeight: '800' },
-          contentStyle: { backgroundColor: '#242527' },
+          headerTitleStyle: { fontWeight: '900', fontSize: 16 },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: '#18191c' },
           headerLeft: () => (
             <View style={styles.headerLeft}>
               <MenuButton onPress={() => setMenuVisible(true)} />
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    color: '#f8f4ed',
+    color: '#d9ad69',
     fontSize: 26,
     lineHeight: 30,
     fontWeight: '800',

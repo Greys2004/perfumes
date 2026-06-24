@@ -215,7 +215,7 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#18191c',
+    backgroundColor: '#151518',
     padding: 18,
   },
   header: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   searchInput: {
     minHeight: 50,
     borderRadius: 8,
-    backgroundColor: '#222327',
+    backgroundColor: '#202126',
     borderWidth: 1,
     borderColor: '#514638',
     color: '#f8f4ed',
@@ -272,16 +272,16 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   card: {
-    backgroundColor: '#232428',
+    backgroundColor: '#222329',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#3d3e42',
+    borderColor: '#34353a',
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 3,
   },
   cardPressed: {
@@ -306,8 +306,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   cardImage: {
-    width: 56,
-    height: 64,
+    width: 64,
+    height: 76,
     borderRadius: 8,
     backgroundColor: '#1f1f20',
   },
@@ -336,8 +336,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   metaText: {
-    color: '#f0d19a',
-    backgroundColor: '#2f3035',
+    color: '#d8c0a0',
+    backgroundColor: '#2b2c31',
     borderRadius: 8,
     overflow: 'hidden',
     paddingHorizontal: 10,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   openText: {
     color: '#f8f4ed',
-    backgroundColor: '#4a3d2e',
+    backgroundColor: '#3a3025',
     borderRadius: 8,
     overflow: 'hidden',
     paddingHorizontal: 10,

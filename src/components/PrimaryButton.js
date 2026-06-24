@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function PrimaryButton({ title, onPress, disabled = false, variant = 'primary' }) {
   return (
@@ -12,9 +12,11 @@ export default function PrimaryButton({ title, onPress, disabled = false, varian
         pressed && !disabled && styles.pressed,
       ]}
     >
-      <Text style={[styles.text, variant === 'secondary' && styles.secondaryText]}>
-        {title}
-      </Text>
+      <View style={styles.inner}>
+        <Text style={[styles.text, variant === 'secondary' && styles.secondaryText]}>
+          {title}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -25,18 +27,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#d8ad62',
+    backgroundColor: '#d9ad69',
     paddingHorizontal: 18,
     shadowColor: '#000',
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    shadowOpacity: 0.26,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+  inner: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondary: {
-    backgroundColor: '#26282b',
+    backgroundColor: '#24252a',
     borderWidth: 1,
-    borderColor: '#5d5345',
+    borderColor: '#4e463b',
   },
   disabled: {
     opacity: 0.55,
@@ -45,9 +52,10 @@ const styles = StyleSheet.create({
     opacity: 0.86,
   },
   text: {
-    color: '#171717',
-    fontSize: 16,
+    color: '#1d1710',
+    fontSize: 15,
     fontWeight: '900',
+    letterSpacing: 0,
   },
   secondaryText: {
     color: '#f5f0e8',

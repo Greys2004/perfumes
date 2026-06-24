@@ -137,7 +137,7 @@ function ClientCard({ client, onPress, onEdit, onDelete }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: '#151518',
     padding: 18,
   },
   header: {
@@ -161,9 +161,9 @@ const styles = StyleSheet.create({
   searchInput: {
     minHeight: 50,
     borderRadius: 8,
-    backgroundColor: '#343436',
+    backgroundColor: '#202126',
     borderWidth: 1,
-    borderColor: '#4b4b4d',
+    borderColor: '#514638',
     color: '#f8f4ed',
     fontSize: 15,
     paddingHorizontal: 14,
@@ -194,15 +194,20 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   card: {
-    backgroundColor: '#303133',
+    backgroundColor: '#222329',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#444446',
+    borderColor: '#34353a',
     padding: 14,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   cardPressed: {
     opacity: 0.84,
@@ -211,7 +216,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#d8ad62',
+    backgroundColor: '#d9ad69',
     alignItems: 'center',
     justifyContent: 'center',
   },
