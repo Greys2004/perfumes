@@ -1,0 +1,16 @@
+Starting project at C:\Users\Greys Pardo\Documents\proyectos\perfumes
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+iOS .\index.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+iOS .\index.js ▓▓░░░░░░░░░░░░░░ 14.1% ( 10/111)
+iOS .\index.js ▓▓░░░░░░░░░░░░░░ 14.1% ( 51/213)
+iOS .\index.js ▓▓▓▓▓▓▓░░░░░░░░░ 48.9% (326/466)
+iOS .\index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74.8% (547/642)
+iOS .\index.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74.8% (690/810)
+iOS .\index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 87.6% (835/892)
+iOS .\index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.4% (966/974)
+iOS .\index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.8% (983/984)
+iOS .\index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (984/984)
+iOS Bundled 36509ms index.js (984 modules)
