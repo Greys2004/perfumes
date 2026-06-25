@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
+import { colors, radius, spacing, shadow } from '../theme';
+import AnimatedPressable from '../components/AnimatedPressable';
 import {
   calculateDashboardData,
   listenCollection,
@@ -15,7 +18,7 @@ const initialData = {
 };
 
 const periodOptions = [
-  { label: 'Dia', value: 'day' },
+  { label: 'Día', value: 'day' },
   { label: 'Semana', value: 'week' },
   { label: 'Mes', value: 'month' },
 ];
@@ -178,12 +181,12 @@ export default function DashboardScreen() {
         <View style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={styles.heroTitleBlock}>
-              <Text style={styles.kicker}>Dashboard</Text>
-              <Text style={styles.title}>Control por periodo</Text>
+              <Text style={styles.kicker}>Resumen Financiero</Text>
+              <Text style={styles.title}>Control de Caja</Text>
             </View>
             <View style={styles.statusChip}>
               <Text style={styles.statusChipText}>
-                {getPeriodLabel(period)}
+                {getPeriodLabel(period).toUpperCase()}
               </Text>
             </View>
           </View>
@@ -208,7 +211,7 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.heroMain}>
-            <Text style={styles.heroLabel}>Vendido {getPeriodLabel(period)}</Text>
+            <Text style={styles.heroLabel}>Total Vendido {getPeriodLabel(period)}</Text>
             <Text
               style={[
                 styles.heroValue,
@@ -217,15 +220,16 @@ export default function DashboardScreen() {
             >
               ${periodDashboard.totalVendido}
             </Text>
+            <View style={styles.heroDivider} />
             <Text style={styles.heroNote}>
-              Pagado ${periodDashboard.totalPagado} - Ganancia ${periodDashboard.gananciaVendida} - Deuda ${periodDashboard.deudaClientes}
+              Cobrado <Text style={styles.goldHighlight}>${periodDashboard.totalPagado}</Text>  ·  Ganancia <Text style={styles.goldHighlight}>${periodDashboard.gananciaVendida}</Text>  ·  Deuda <Text style={styles.goldHighlight}>${periodDashboard.deudaClientes}</Text>
             </Text>
           </View>
 
           <View style={styles.heroGrid}>
-            <MiniStat label="Gastado" value={`$${periodDashboard.totalGastado}`} />
-            <MiniStat label="Pagado" value={`$${periodDashboard.totalPagado}`} />
-            <MiniStat label="Stock total" value={`${stockTotal} ml`} />
+            <MiniStat icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.danger} />
+            <MiniStat icon="dollar-sign" label="Cobrado" value={`$${periodDashboard.totalPagado}`} color={colors.success} />
+            <MiniStat icon="box" label="Stock ml" value={`${stockTotal} ml`} color={colors.gold} />
           </View>
         </View>
 
@@ -240,28 +244,28 @@ export default function DashboardScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.metricRail}
         >
-          <MetricCard label="Gastado" value={`$${periodDashboard.totalGastado}`} />
-          <MetricCard label="Vendido" value={`$${periodDashboard.totalVendido}`} />
-          <MetricCard label="Pagado" value={`$${periodDashboard.totalPagado}`} />
-          <MetricCard label="Deben" value={`$${periodDashboard.deudaClientes}`} />
-          <MetricCard label="G. ventas" value={`$${periodDashboard.gananciaVendida}`} focus />
-          <MetricCard label="G. cobrada" value={`$${periodDashboard.gananciaCobrada}`} focus />
+          <DashboardMetricCard icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.danger} />
+          <DashboardMetricCard icon="tag" label="Vendido" value={`$${periodDashboard.totalVendido}`} color={colors.text} />
+          <DashboardMetricCard icon="dollar-sign" label="Cobrado" value={`$${periodDashboard.totalPagado}`} color={colors.success} />
+          <DashboardMetricCard icon="alert-circle" label="Deben" value={`$${periodDashboard.deudaClientes}`} color={colors.gold} />
+          <DashboardMetricCard icon="trending-up" label="Ganancia Ventas" value={`$${periodDashboard.gananciaVendida}`} color={colors.gold} focus />
+          <DashboardMetricCard icon="trending-up" label="Ganancia Cobrada" value={`$${periodDashboard.gananciaCobrada}`} color={colors.success} focus />
         </ScrollView>
 
         <View style={styles.panel}>
-          <SectionHeader title="Mapa del periodo" detail={`resultado de ${getPeriodLabel(period)}`} />
-          <MoneyBar label="Vendido" value={periodDashboard.totalVendido} maxValue={maxMoney} />
-          <MoneyBar label="Pagado" value={periodDashboard.totalPagado} maxValue={maxMoney} />
-          <MoneyBar label="Deuda" value={periodDashboard.deudaClientes} maxValue={maxMoney} muted />
-          <MoneyBar label="Ganancia ventas" value={periodDashboard.gananciaVendida} maxValue={maxMoney} />
-          <MoneyBar label="Ganancia cobrada" value={periodDashboard.gananciaCobrada} maxValue={maxMoney} muted />
-          <MoneyBar label="Gastado - pagado" value={periodDashboard.gastadoMenosPagado} maxValue={maxMoney} muted />
+          <SectionHeader icon="map" title="Mapa del Periodo" detail={`Cifras de rendimiento ${getPeriodLabel(period)}`} />
+          <MoneyBar label="Vendido" value={periodDashboard.totalVendido} maxValue={maxMoney} color={colors.text} />
+          <MoneyBar label="Cobrado" value={periodDashboard.totalPagado} maxValue={maxMoney} color={colors.success} />
+          <MoneyBar label="Deuda de Clientes" value={periodDashboard.deudaClientes} maxValue={maxMoney} color={colors.gold} muted />
+          <MoneyBar label="Ganancia Estimada (Ventas)" value={periodDashboard.gananciaVendida} maxValue={maxMoney} color={colors.gold} />
+          <MoneyBar label="Ganancia Real (Cobrado)" value={periodDashboard.gananciaCobrada} maxValue={maxMoney} color={colors.success} muted />
+          <MoneyBar label="Diferencia Gastado/Cobrado" value={periodDashboard.gastadoMenosPagado} maxValue={maxMoney} color={colors.danger} muted />
         </View>
 
         <View style={styles.panel}>
-          <SectionHeader title="Riesgo de inventario" detail="5 perfumes con menos stock" />
+          <SectionHeader icon="alert-triangle" title="Alerta de Inventario" detail="Perfumes críticos con menor stock" />
           {dashboard.perfumesMenosStock.length === 0 ? (
-            <Text style={styles.emptyText}>Aun no hay inventario registrado.</Text>
+            <Text style={styles.emptyText}>No hay stock bajo registrado.</Text>
           ) : (
             dashboard.perfumesMenosStock.map((perfumeStock, index) => (
               <StockRow key={perfumeStock.perfume_id} item={perfumeStock} index={index} />
@@ -270,7 +274,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.panel}>
-          <SectionHeader title="Mas vendidos" detail={`ranking de ${getPeriodLabel(period)}`} />
+          <SectionHeader icon="award" title="Ranking Más Vendidos" detail={`Perfumes líderes ${getPeriodLabel(period)}`} />
           {periodDashboard.perfumesMasVendidos.length === 0 ? (
             <Text style={styles.emptyText}>No hay ventas en este periodo.</Text>
           ) : (
@@ -286,9 +290,9 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.panel}>
-          <SectionHeader title="Inventario completo" detail="ml y botellas por perfume" />
+          <SectionHeader icon="database" title="Inventario de Fragancias" detail="Detalle completo de ml y botellas" />
           {dashboard.inventarioPorPerfume.length === 0 ? (
-            <Text style={styles.emptyText}>Aun no hay inventario registrado.</Text>
+            <Text style={styles.emptyText}>Aún no hay inventario registrado.</Text>
           ) : (
             dashboard.inventarioPorPerfume.map((perfumeStock) => (
               <InventoryCard key={perfumeStock.perfume_id} item={perfumeStock} />
@@ -300,36 +304,47 @@ export default function DashboardScreen() {
   );
 }
 
-function MiniStat({ label, value }) {
+function MiniStat({ icon, label, value, color }) {
   return (
     <View style={styles.miniStat}>
+      <View style={styles.miniStatTop}>
+        <Feather name={icon} size={11} color={color} />
+        <Text style={styles.miniLabel}>{label}</Text>
+      </View>
       <Text style={styles.miniValue}>{value}</Text>
-      <Text style={styles.miniLabel}>{label}</Text>
     </View>
   );
 }
 
-function SectionHeader({ title, detail }) {
+function SectionHeader({ icon, title, detail }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.panelTitle}>{title}</Text>
+      <View style={styles.sectionTitleBlock}>
+        <Feather name={icon} size={18} color={colors.gold} style={styles.sectionIcon} />
+        <Text style={styles.panelTitle}>{title}</Text>
+      </View>
       <Text style={styles.panelDetail}>{detail}</Text>
     </View>
   );
 }
 
-function MetricCard({ label, value, focus = false }) {
+function DashboardMetricCard({ icon, label, value, color, focus = false }) {
   const isNegative = String(value).includes('$-');
 
   return (
     <View style={[styles.metricCard, focus && styles.metricFocus]}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={[styles.metricValue, isNegative && styles.negativeValue]}>{value}</Text>
+      <View style={styles.metricCardHeader}>
+        <Text style={styles.metricLabel}>{label}</Text>
+        <Feather name={icon} size={13} color={focus ? colors.gold : colors.textSubtle} />
+      </View>
+      <Text style={[styles.metricValue, isNegative && styles.negativeValue, { color: isNegative ? colors.danger : (focus ? colors.gold : colors.text) }]}>
+        {value}
+      </Text>
     </View>
   );
 }
 
-function MoneyBar({ label, value, maxValue, muted = false }) {
+function MoneyBar({ label, value, maxValue, color, muted = false }) {
   const numericValue = Number(value) || 0;
   const isNegative = numericValue < 0;
   const safeValue = Math.abs(numericValue);
@@ -339,14 +354,16 @@ function MoneyBar({ label, value, maxValue, muted = false }) {
     <View style={styles.moneyRow}>
       <View style={styles.moneyTop}>
         <Text style={styles.moneyLabel}>{label}</Text>
-        <Text style={[styles.moneyValue, isNegative && styles.negativeValue]}>${value}</Text>
+        <Text style={[styles.moneyValue, isNegative && styles.negativeValue, { color: isNegative ? colors.danger : color }]}>
+          ${value}
+        </Text>
       </View>
       <View style={styles.moneyTrack}>
         <View
           style={[
             styles.moneyFill,
-            muted && styles.moneyFillMuted,
-            isNegative && styles.moneyFillNegative,
+            { backgroundColor: isNegative ? colors.danger : color },
+            muted && { opacity: 0.5 },
             { width },
           ]}
         />
@@ -361,16 +378,16 @@ function StockRow({ item, index }) {
 
   return (
     <View style={[styles.stockRow, isEmpty && styles.stockRowEmpty]}>
-      <View style={styles.rankBadge}>
+      <View style={[styles.rankBadge, isEmpty && styles.rankBadgeEmpty]}>
         <Text style={styles.rankBadgeText}>{index + 1}</Text>
       </View>
       <View style={styles.rowTextGroup}>
         <Text style={styles.rowTitle}>{item.nombre}</Text>
-        <Text style={styles.rowSubtext}>{item.ml_restantes} ml - {bottles} botellas</Text>
+        <Text style={styles.rowSubtext}>{item.ml_restantes} ml restantes  ·  {bottles} botellas</Text>
       </View>
-      <View style={styles.stockSignal}>
+      <View style={[styles.stockSignal, isEmpty && styles.stockSignalEmpty]}>
         <Text style={[styles.stockSignalText, isEmpty && styles.negativeValue]}>
-          {isEmpty ? 'Agotado' : 'Bajo'}
+          {isEmpty ? 'AGOTADO' : 'BAJO'}
         </Text>
       </View>
     </View>
@@ -407,7 +424,7 @@ function InventoryCard({ item }) {
     <View style={[styles.inventoryCard, isEmpty && styles.inventoryCardEmpty]}>
       <View style={styles.rowTextGroup}>
         <Text style={styles.rowTitle}>{item.nombre}</Text>
-        <Text style={styles.rowSubtext}>{item.compras_con_stock} compras con stock</Text>
+        <Text style={styles.rowSubtext}>{item.compras_con_stock} compras en lote activo</Text>
       </View>
       <View style={styles.inventoryNumbers}>
         <Text style={[styles.inventoryMl, isEmpty && styles.negativeValue]}>{item.ml_restantes} ml</Text>
@@ -420,113 +437,124 @@ function InventoryCard({ item }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#101114',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 16,
+    padding: spacing.md,
     paddingBottom: 42,
   },
   motionWrap: {
     flex: 1,
   },
   hero: {
-    minHeight: 270,
-    backgroundColor: '#2a211a',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#5f4930',
-    padding: 18,
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.28,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 6,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.glow,
   },
   heroTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 28,
+    marginBottom: spacing.md,
   },
   heroTitleBlock: {
     flex: 1,
   },
   kicker: {
-    color: '#d9ad69',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-  title: {
-    color: '#fff7ef',
-    fontSize: 31,
-    fontWeight: '900',
-  },
-  statusChip: {
-    minWidth: 104,
-    borderRadius: 8,
-    backgroundColor: '#161416',
-    borderWidth: 1,
-    borderColor: '#6d5438',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  statusChipText: {
-    color: '#d9ad69',
+    color: colors.gold,
     fontSize: 12,
     fontWeight: '900',
-    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  title: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  statusChip: {
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusChipText: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   periodTabs: {
-    minHeight: 48,
-    borderRadius: 8,
-    backgroundColor: '#151518',
+    minHeight: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#4b3a29',
+    borderColor: colors.line,
     flexDirection: 'row',
-    padding: 4,
+    padding: 3,
     gap: 4,
-    marginBottom: 24,
+    marginBottom: spacing.md,
   },
   periodTab: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: radius.sm - 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   periodTabActive: {
-    backgroundColor: '#d9ad69',
+    backgroundColor: colors.gold,
   },
   periodTabText: {
-    color: '#cdbda9',
-    fontSize: 13,
-    fontWeight: '900',
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '800',
   },
   periodTabTextActive: {
-    color: '#1a1510',
+    color: colors.ink,
   },
   heroMain: {
-    marginBottom: 24,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   heroLabel: {
-    color: '#cdbda9',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 6,
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   heroValue: {
-    color: '#fff7ef',
-    fontSize: 46,
+    color: colors.text,
+    fontSize: 38,
+    fontWeight: '900',
+    letterSpacing: -0.8,
+  },
+  heroDivider: {
+    height: 1,
+    backgroundColor: colors.line,
+    marginVertical: spacing.sm,
+  },
+  goldHighlight: {
+    color: colors.gold,
     fontWeight: '900',
   },
   heroNote: {
-    color: '#cdbda9',
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 8,
-    lineHeight: 19,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
   },
   heroGrid: {
     flexDirection: 'row',
@@ -534,182 +562,205 @@ const styles = StyleSheet.create({
   },
   miniStat: {
     flex: 1,
-    minHeight: 68,
-    borderRadius: 8,
-    backgroundColor: '#151518',
+    minHeight: 58,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#4b3a29',
+    borderColor: colors.line,
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm,
+  },
+  miniStatTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
   },
   miniValue: {
-    color: '#fff7ef',
-    fontSize: 18,
+    color: colors.text,
+    fontSize: 15,
     fontWeight: '900',
   },
   miniLabel: {
-    color: '#9f958d',
-    fontSize: 12,
+    color: colors.textSubtle,
+    fontSize: 10,
     fontWeight: '800',
-    marginTop: 3,
+    textTransform: 'uppercase',
   },
   metricRail: {
-    gap: 10,
-    paddingBottom: 14,
+    gap: 8,
+    paddingBottom: spacing.sm,
   },
   metricCard: {
-    width: 140,
-    minHeight: 96,
-    backgroundColor: '#1b1c21',
-    borderRadius: 8,
+    width: 130,
+    minHeight: 80,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: '#2d2e35',
-    padding: 14,
+    borderColor: colors.line,
+    padding: spacing.sm,
     justifyContent: 'space-between',
+    ...shadow.card,
+  },
+  metricCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   metricFocus: {
-    backgroundColor: '#241f1c',
-    borderColor: '#5f4930',
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.surfaceRaised,
   },
   metricLabel: {
-    color: '#a9a39d',
-    fontSize: 12,
-    fontWeight: '900',
+    color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   metricValue: {
-    color: '#fff7ef',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
   },
   negativeValue: {
-    color: '#f0a9a0',
+    color: colors.danger,
   },
   panel: {
-    backgroundColor: '#18191e',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#2d2e35',
-    padding: 14,
-    marginBottom: 14,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   sectionHeader: {
-    marginBottom: 14,
+    marginBottom: spacing.md,
+  },
+  sectionTitleBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  sectionIcon: {
+    marginBottom: 1,
   },
   panelTitle: {
-    color: '#fff7ef',
-    fontSize: 20,
-    fontWeight: '900',
-    marginBottom: 3,
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   panelDetail: {
-    color: '#8f8984',
-    fontSize: 12,
-    fontWeight: '800',
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '600',
   },
   moneyRow: {
-    marginBottom: 14,
+    marginBottom: spacing.sm,
   },
   moneyTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   moneyLabel: {
-    color: '#fff7ef',
-    fontSize: 13,
-    fontWeight: '900',
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   moneyValue: {
-    color: '#d9ad69',
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 12,
+    fontWeight: '800',
   },
   moneyTrack: {
-    height: 12,
-    borderRadius: 8,
-    backgroundColor: '#101114',
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.background,
     overflow: 'hidden',
   },
   moneyFill: {
     height: '100%',
-    borderRadius: 8,
-    backgroundColor: '#d9ad69',
-  },
-  moneyFillMuted: {
-    backgroundColor: '#80766a',
-  },
-  moneyFillNegative: {
-    backgroundColor: '#b8645b',
+    borderRadius: radius.pill,
   },
   stockRow: {
-    minHeight: 72,
-    borderRadius: 8,
-    backgroundColor: '#202127',
+    minHeight: 64,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#35343b',
-    padding: 12,
-    marginBottom: 9,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.sm,
   },
   stockRowEmpty: {
-    backgroundColor: '#2b2020',
-    borderColor: '#714943',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
   },
   rankBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    backgroundColor: '#d9ad69',
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rankBadgeEmpty: {
+    backgroundColor: colors.danger,
+  },
   rankBadgeText: {
-    color: '#1a1510',
-    fontSize: 15,
+    color: colors.ink,
+    fontSize: 12,
     fontWeight: '900',
   },
   rowTextGroup: {
     flex: 1,
   },
   rowTitle: {
-    color: '#fff7ef',
-    fontSize: 15,
-    fontWeight: '900',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   rowSubtext: {
-    color: '#a9a39d',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   rowValue: {
-    color: '#d9ad69',
+    color: colors.gold,
     fontSize: 13,
     fontWeight: '900',
   },
   stockSignal: {
-    borderRadius: 8,
-    backgroundColor: '#111216',
-    paddingHorizontal: 9,
-    paddingVertical: 7,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  stockSignalEmpty: {
+    borderColor: colors.dangerLine,
   },
   stockSignalText: {
-    color: '#d9ad69',
-    fontSize: 11,
+    color: colors.gold,
+    fontSize: 9,
     fontWeight: '900',
   },
   rankingCard: {
-    borderRadius: 8,
-    backgroundColor: '#202127',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#35343b',
-    padding: 12,
-    marginBottom: 9,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: 8,
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.sm,
+    alignItems: 'center',
   },
   rankingBody: {
     flex: 1,
@@ -718,66 +769,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 9,
+    marginBottom: 6,
   },
   slimTrack: {
-    height: 8,
-    borderRadius: 8,
-    backgroundColor: '#101114',
+    height: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.background,
     overflow: 'hidden',
+    marginBottom: 4,
   },
   slimFill: {
     height: '100%',
-    borderRadius: 8,
-    backgroundColor: '#d9ad69',
+    borderRadius: radius.pill,
+    backgroundColor: colors.gold,
   },
   inventoryCard: {
-    minHeight: 68,
-    borderRadius: 8,
-    backgroundColor: '#202127',
+    minHeight: 58,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#35343b',
-    padding: 12,
-    marginBottom: 9,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.sm,
   },
   inventoryCardEmpty: {
-    backgroundColor: '#2b2020',
-    borderColor: '#714943',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
   },
   inventoryNumbers: {
     alignItems: 'flex-end',
   },
   inventoryMl: {
-    color: '#fff7ef',
-    fontSize: 15,
+    color: colors.text,
+    fontSize: 14,
     fontWeight: '900',
   },
   inventoryBottle: {
-    color: '#d9ad69',
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 3,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
   },
   emptyText: {
-    color: '#a9a39d',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.textSubtle,
+    fontSize: 13,
+    lineHeight: 18,
   },
   messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#ffd7d7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

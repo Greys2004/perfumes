@@ -1,63 +1,66 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import AnimatedPressable from './AnimatedPressable';
+import { colors, radius, shadow } from '../theme';
 
 export default function PrimaryButton({ title, onPress, disabled = false, variant = 'primary' }) {
+  const buttonStyle = [
+    styles.button,
+    variant === 'secondary' && styles.secondary,
+    disabled && styles.disabled,
+  ];
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.button,
-        variant === 'secondary' && styles.secondary,
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
-      ]}
+      style={buttonStyle}
     >
-      <View style={styles.inner}>
-        <Text style={[styles.text, variant === 'secondary' && styles.secondaryText]}>
-          {title}
-        </Text>
-      </View>
-    </Pressable>
+      <Text style={[styles.text, variant === 'secondary' && styles.secondaryText, disabled && styles.disabledText]}>
+        {title}
+      </Text>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#d9ad69',
-    paddingHorizontal: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.26,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
-  },
-  inner: {
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.gold,
+    paddingHorizontal: 22,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    ...shadow.glow,
   },
   secondary: {
-    backgroundColor: '#24252a',
-    borderWidth: 1,
-    borderColor: '#4e463b',
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.lineStrong,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   disabled: {
-    opacity: 0.55,
-  },
-  pressed: {
-    opacity: 0.86,
+    backgroundColor: colors.surfaceSoft,
+    borderColor: 'transparent',
+    opacity: 0.5,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   text: {
-    color: '#1d1710',
-    fontSize: 15,
+    color: colors.ink,
+    fontSize: 14,
     fontWeight: '900',
-    letterSpacing: 0,
+    letterSpacing: 0.5,
   },
   secondaryText: {
-    color: '#f5f0e8',
+    color: colors.textMuted,
+  },
+  disabledText: {
+    color: colors.textSubtle,
   },
 });

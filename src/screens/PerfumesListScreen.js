@@ -7,11 +7,13 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
-import PrimaryButton from '../components/PrimaryButton';
+import SearchBar from '../components/SearchBar';
+import AnimatedPressable from '../components/AnimatedPressable';
+import { colors, radius, spacing, shadow } from '../theme';
 import {
   deactivatePerfume,
   listenActivePerfumes,
@@ -65,24 +67,25 @@ export default function PerfumesListScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.kicker}>Catalogo</Text>
+          <Text style={styles.kicker}>Catálogo Interno</Text>
           <Text style={styles.title}>Perfumes</Text>
         </View>
-        <PrimaryButton
-          title="Agregar"
+        <AnimatedPressable
           onPress={() => navigation.navigate('PerfumeForm')}
-        />
+          style={styles.addButton}
+        >
+          <Feather name="plus" size={16} color={colors.ink} style={styles.addIcon} />
+          <Text style={styles.addButtonText}>Agregar</Text>
+        </AnimatedPressable>
       </View>
 
-      <TextInput
+      <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por nombre, marca u olor"
-        placeholderTextColor="#8f8f91"
-        style={styles.searchInput}
+        placeholder="Buscar perfume..."
       />
 
-      {loading && <ActivityIndicator color="#d8ad62" style={styles.loader} />}
+      {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
 
       {!!error && (
         <View style={styles.messageBox}>
@@ -95,10 +98,12 @@ export default function PerfumesListScreen({ navigation }) {
           data={filteredPerfumes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              Todavia no hay perfumes registrados.
-            </Text>
+            <View style={styles.emptyContainer}>
+              <Feather name="folder-open" size={24} color={colors.textSubtle} style={{ marginBottom: 8 }} />
+              <Text style={styles.emptyText}>Todavía no hay perfumes registrados.</Text>
+            </View>
           }
           ListFooterComponent={
             <InactivePerfumesSection
@@ -106,7 +111,7 @@ export default function PerfumesListScreen({ navigation }) {
               onRestore={(perfume) => {
                 Alert.alert(
                   'Activar perfume',
-                  `${perfume.nombre} volvera a aparecer en el catalogo y en ventas.`,
+                  `"${perfume.nombre}" volverá a aparecer en el catálogo público y ventas.`,
                   [
                     { text: 'Cancelar', style: 'cancel' },
                     {
@@ -126,7 +131,7 @@ export default function PerfumesListScreen({ navigation }) {
               onDelete={() => {
                 Alert.alert(
                   'Desactivar perfume',
-                  'No se borrara definitivamente, solo dejara de aparecer activo.',
+                  'El perfume no se borrará definitivamente, solo dejará de aparecer activo.',
                   [
                     { text: 'Cancelar', style: 'cancel' },
                     {
@@ -146,40 +151,45 @@ export default function PerfumesListScreen({ navigation }) {
 }
 
 function InactivePerfumesSection({ perfumes, onRestore }) {
+  if (perfumes.length === 0) return null;
+
   return (
     <View style={styles.inactiveSection}>
-      <Text style={styles.inactiveTitle}>Desactivados</Text>
+      <View style={styles.inactiveHeader}>
+        <Feather name="eye-off" size={15} color={colors.textSubtle} />
+        <Text style={styles.inactiveTitle}>Perfumes Ocultados</Text>
+      </View>
       <Text style={styles.inactiveSubtitle}>
-        Aqui quedan los perfumes que ocultaste para poder recuperarlos despues.
+        Sección de archivo para reactivar perfumes que no deseas mostrar temporalmente.
       </Text>
-      {perfumes.length === 0 ? (
-        <Text style={styles.inactiveEmpty}>No hay perfumes desactivados.</Text>
-      ) : (
-        perfumes.map((perfume) => (
-          <View key={perfume.id} style={styles.inactiveCard}>
-            <View style={styles.inactiveInfo}>
-              <Text style={styles.inactiveName}>{perfume.nombre}</Text>
-              <Text style={styles.inactiveBrand}>{perfume.marca || 'Marca pendiente'}</Text>
-            </View>
-            <Pressable onPress={() => onRestore(perfume)} style={styles.restoreButton}>
-              <Text style={styles.restoreButtonText}>Activar</Text>
-            </Pressable>
+      {perfumes.map((perfume) => (
+        <View key={perfume.id} style={styles.inactiveCard}>
+          <View style={styles.inactiveInfo}>
+            <Text style={styles.inactiveName}>{perfume.nombre}</Text>
+            <Text style={styles.inactiveBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
           </View>
-        ))
-      )}
+          <AnimatedPressable onPress={() => onRestore(perfume)} style={styles.restoreButton}>
+            <Feather name="rotate-ccw" size={13} color={colors.successText} style={{ marginRight: 4 }} />
+            <Text style={styles.restoreButtonText}>Reactivar</Text>
+          </AnimatedPressable>
+        </View>
+      ))}
     </View>
   );
 }
 
 function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={styles.card}
+      scaleTo={0.98}
     >
       <View style={styles.cardTop}>
         {perfume.imagen ? (
-          <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
+          </View>
         ) : (
           <View style={styles.bottleMark}>
             <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
@@ -187,8 +197,9 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
         )}
         <View style={styles.cardInfo}>
           <Text style={styles.cardTitle}>{perfume.nombre}</Text>
-          <Text style={styles.cardBrand}>{perfume.marca || 'Marca pendiente'}</Text>
+          <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
         </View>
+        <Feather name="chevron-right" size={18} color={colors.textSubtle} />
       </View>
 
       {!!perfume.descripcion_olor && (
@@ -196,227 +207,256 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
       )}
 
       <View style={styles.cardMetaRow}>
-        <Text style={styles.metaText}>{perfume.ml_botella_completa || 0} ml</Text>
-        <Text style={styles.metaText}>Liverpool ${perfume.precio_liverpool || 0}</Text>
-        <Text style={styles.openText}>Ver detalle</Text>
+        <View style={styles.metaBadge}>
+          <Feather name="droplet" size={12} color={colors.gold} style={{ marginRight: 4 }} />
+          <Text style={styles.metaText}>{perfume.ml_botella_completa || 0} ml</Text>
+        </View>
+        <View style={styles.metaBadge}>
+          <Feather name="shopping-bag" size={12} color={colors.gold} style={{ marginRight: 4 }} />
+          <Text style={styles.metaText}>Liverpool: ${perfume.precio_liverpool || 0}</Text>
+        </View>
       </View>
+      
       <View style={styles.adminActions}>
         <Pressable onPress={onEdit} style={styles.actionButton}>
+          <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
           <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Text style={styles.actionButtonTextLight}>Desactivar</Text>
+          <Feather name="eye-off" size={13} color={colors.textMuted} style={{ marginRight: 5 }} />
+          <Text style={styles.actionButtonTextLight}>Ocultar</Text>
         </Pressable>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#151518',
-    padding: 18,
+    backgroundColor: colors.background,
+    padding: spacing.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 18,
+    marginBottom: spacing.md,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
     marginBottom: 4,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 32,
-    fontWeight: '800',
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
-  searchInput: {
-    minHeight: 50,
-    borderRadius: 8,
-    backgroundColor: '#202126',
-    borderWidth: 1,
-    borderColor: '#514638',
-    color: '#f8f4ed',
-    fontSize: 15,
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gold,
+    borderRadius: radius.sm,
     paddingHorizontal: 14,
-    marginBottom: 16,
+    minHeight: 38,
+    ...shadow.glow,
+  },
+  addIcon: {
+    marginRight: 4,
+  },
+  addButtonText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.2,
   },
   loader: {
-    marginTop: 28,
+    marginTop: 36,
   },
   messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#ffd7d7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 32,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
   },
   emptyText: {
-    color: '#c7c1b7',
-    fontSize: 15,
+    color: colors.textSubtle,
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 32,
   },
   card: {
-    backgroundColor: '#222329',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#34353a',
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 3,
-  },
-  cardPressed: {
-    opacity: 0.84,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
-  bottleMark: {
-    width: 46,
-    height: 54,
-    borderRadius: 8,
-    backgroundColor: '#d8ad62',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottleText: {
-    color: '#1f1f20',
-    fontSize: 20,
-    fontWeight: '800',
+  imageContainer: {
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.sm,
+    padding: 2,
   },
   cardImage: {
-    width: 64,
-    height: 76,
-    borderRadius: 8,
-    backgroundColor: '#1f1f20',
+    width: 52,
+    height: 62,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.background,
+  },
+  bottleMark: {
+    width: 52,
+    height: 62,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.glow,
+  },
+  bottleText: {
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: '900',
   },
   cardInfo: {
     flex: 1,
   },
   cardTitle: {
-    color: '#f8f4ed',
-    fontSize: 18,
+    color: colors.text,
+    fontSize: 16,
     fontWeight: '800',
   },
   cardBrand: {
-    color: '#c7c1b7',
-    fontSize: 14,
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
     marginTop: 2,
   },
   description: {
-    color: '#d7d2ca',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 12,
+    color: colors.textSubtle,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
   cardMetaRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
+    gap: 8,
+    marginTop: spacing.md,
+  },
+  metaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   metaText: {
-    color: '#d8c0a0',
-    backgroundColor: '#2b2c31',
-    borderRadius: 8,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  openText: {
-    color: '#f8f4ed',
-    backgroundColor: '#3a3025',
-    borderRadius: 8,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 13,
+    color: colors.textMuted,
+    fontSize: 12,
     fontWeight: '700',
   },
   adminActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
   },
   actionButton: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 8,
-    backgroundColor: '#d8ad62',
+    minHeight: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonDark: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 8,
-    backgroundColor: '#4a4a4c',
+    minHeight: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonText: {
-    color: '#1f1f20',
-    fontSize: 13,
+    color: colors.ink,
+    fontSize: 12,
     fontWeight: '900',
   },
   actionButtonTextLight: {
-    color: '#f8f4ed',
-    fontSize: 13,
+    color: colors.textMuted,
+    fontSize: 12,
     fontWeight: '900',
   },
   inactiveSection: {
-    backgroundColor: '#202124',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#35363a',
-    padding: 14,
-    marginTop: 10,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    ...shadow.card,
   },
-  inactiveTitle: {
-    color: '#f8f4ed',
-    fontSize: 19,
-    fontWeight: '900',
+  inactiveHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 4,
   },
-  inactiveSubtitle: {
-    color: '#a9a59f',
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 12,
+  inactiveTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
   },
-  inactiveEmpty: {
-    color: '#8f8f91',
-    fontSize: 14,
+  inactiveSubtitle: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: spacing.md,
   },
   inactiveCard: {
-    minHeight: 58,
-    borderRadius: 8,
-    backgroundColor: '#2b2c30',
+    minHeight: 52,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#3d3e42',
-    padding: 10,
+    borderColor: colors.line,
+    padding: spacing.sm,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -427,25 +467,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inactiveName: {
-    color: '#f8f4ed',
-    fontSize: 15,
+    color: colors.textMuted,
+    fontSize: 14,
     fontWeight: '800',
   },
   inactiveBrand: {
-    color: '#a9a59f',
-    fontSize: 13,
+    color: colors.textSubtle,
+    fontSize: 12,
     marginTop: 2,
   },
   restoreButton: {
-    minHeight: 38,
-    borderRadius: 8,
-    backgroundColor: '#6db28f',
+    minHeight: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.success,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   restoreButtonText: {
-    color: '#14241d',
-    fontSize: 13,
+    color: colors.successText,
+    fontSize: 11,
     fontWeight: '900',
   },
 });

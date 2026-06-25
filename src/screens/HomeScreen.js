@@ -6,10 +6,12 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
+import SearchBar from '../components/SearchBar';
+import { colors, radius, spacing, shadow } from '../theme';
 import { listenActivePerfumes } from '../services/perfumesService';
 import { listenAllPresentationPrices } from '../services/presentationPricesService';
 
@@ -17,7 +19,7 @@ const typeLabels = {
   decant_3ml: '3 ml',
   decant_5ml: '5 ml',
   decant_10ml: '10 ml',
-  botella_completa: 'Botella',
+  botella_completa: 'Botella completa',
 };
 
 export default function HomeScreen() {
@@ -71,33 +73,31 @@ export default function HomeScreen() {
       <View style={styles.heroPanel}>
         <View style={styles.heroHeader}>
           <View style={styles.heroTextBlock}>
-            <Text style={styles.kicker}>Catalogo para cliente</Text>
-            <Text style={styles.title}>Perfumes disponibles</Text>
+            <Text style={styles.kicker}>Catálogo AromaOrigen</Text>
+            <Text style={styles.title}>Perfumes Disponibles</Text>
             <Text style={styles.subtitle}>
-              Vista limpia para mostrar aromas y notas sin datos internos.
+              Explora aromas, marcas y descripciones olfativas de manera clara.
             </Text>
           </View>
-          <View style={styles.priceToggle}>
-            <Text style={styles.priceToggleLabel}>Precios</Text>
+          <View style={styles.priceToggleContainer}>
+            <Text style={styles.priceToggleLabel}>Ver Precios</Text>
             <Switch
               value={showPrices}
               onValueChange={setShowPrices}
-              trackColor={{ false: '#494a4d', true: '#6db28f' }}
-              thumbColor={showPrices ? '#f8f4ed' : '#b7b1a7'}
+              trackColor={{ false: '#24262E', true: colors.gold }}
+              thumbColor={showPrices ? colors.text : colors.textSubtle}
             />
           </View>
         </View>
       </View>
 
-      <TextInput
+      <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por nombre, marca u olor"
-        placeholderTextColor="#8f8f91"
-        style={styles.searchInput}
+        placeholder="Buscar por aroma, marca o nombre..."
       />
 
-      {loading && <ActivityIndicator color="#d8ad62" style={styles.loader} />}
+      {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
 
       {!!error && (
         <View style={styles.messageBox}>
@@ -107,7 +107,8 @@ export default function HomeScreen() {
 
       {!loading && !error && filteredPerfumes.length === 0 && (
         <View style={styles.emptyPanel}>
-          <Text style={styles.emptyText}>Todavia no hay perfumes para mostrar.</Text>
+          <Feather name="info" size={24} color={colors.textSubtle} style={styles.emptyIcon} />
+          <Text style={styles.emptyText}>No encontramos perfumes que coincidan con tu búsqueda.</Text>
         </View>
       )}
 
@@ -117,7 +118,9 @@ export default function HomeScreen() {
           <View key={perfume.id} style={styles.perfumeCard}>
             <View style={styles.cardTop}>
               {perfume.imagen ? (
-                <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
+                </View>
               ) : (
                 <View style={styles.bottleMark}>
                   <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
@@ -125,7 +128,13 @@ export default function HomeScreen() {
               )}
               <View style={styles.cardInfo}>
                 <Text style={styles.cardTitle}>{perfume.nombre}</Text>
-                <Text style={styles.cardBrand}>{perfume.marca || 'Marca pendiente'}</Text>
+                <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
+                {!!perfume.duracion && (
+                  <View style={styles.duracionRow}>
+                    <Feather name="clock" size={12} color={colors.gold} />
+                    <Text style={styles.duracionText}>{perfume.duracion}</Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -134,29 +143,31 @@ export default function HomeScreen() {
             )}
 
             <View style={styles.infoGrid}>
-              {!!perfume.duracion && <InfoPill label="Duracion" value={perfume.duracion} />}
               {!!perfume.notas_salida && (
-                <InfoPill label="Salida" value={perfume.notas_salida} />
+                <InfoRow icon="wind" label="Notas de Salida" value={perfume.notas_salida} />
               )}
               {!!perfume.notas_corazon && (
-                <InfoPill label="Corazon" value={perfume.notas_corazon} />
+                <InfoRow icon="heart" label="Notas de Corazón" value={perfume.notas_corazon} />
               )}
               {!!perfume.notas_fondo && (
-                <InfoPill label="Fondo" value={perfume.notas_fondo} />
+                <InfoRow icon="arrow-down" label="Notas de Fondo" value={perfume.notas_fondo} />
               )}
             </View>
 
             {showPrices && prices.some((price) => price.perfume_id === perfume.id) && (
-              <View style={styles.priceStrip}>
-                {prices
-                  .filter((price) => price.perfume_id === perfume.id)
-                  .map((price) => (
-                    <PricePill
-                      key={price.id}
-                      label={typeLabels[price.tipo] || price.tipo}
-                      value={`$${price.precio_publico}`}
-                    />
-                  ))}
+              <View style={styles.priceSection}>
+                <Text style={styles.priceSectionTitle}>Presentaciones & Precios</Text>
+                <View style={styles.priceStrip}>
+                  {prices
+                    .filter((price) => price.perfume_id === perfume.id)
+                    .map((price) => (
+                      <PricePill
+                        key={price.id}
+                        label={typeLabels[price.tipo] || price.tipo}
+                        value={`$${price.precio_publico}`}
+                      />
+                    ))}
+                </View>
               </View>
             )}
           </View>
@@ -165,10 +176,13 @@ export default function HomeScreen() {
   );
 }
 
-function InfoPill({ label, value }) {
+function InfoRow({ icon, label, value }) {
   return (
-    <View style={styles.infoPill}>
-      <Text style={styles.infoLabel}>{label}</Text>
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabelBlock}>
+        <Feather name={icon} size={13} color={colors.gold} style={styles.infoIcon} />
+        <Text style={styles.infoLabel}>{label}</Text>
+      </View>
       <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
@@ -186,198 +200,246 @@ function PricePill({ label, value }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#18191c',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 18,
+    padding: spacing.md,
     paddingBottom: 40,
   },
   heroPanel: {
-    backgroundColor: '#25282d',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#5d4a2d',
-    padding: 18,
-    marginBottom: 16,
+    borderColor: colors.line,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   heroHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 14,
+    gap: spacing.md,
   },
   heroTextBlock: {
     flex: 1,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 34,
+    color: colors.text,
+    fontSize: 26,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: '#ded4c5',
-    fontSize: 15,
-    lineHeight: 22,
+    color: colors.textSubtle,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  priceToggle: {
+  priceToggleContainer: {
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   priceToggleLabel: {
-    color: '#ded4c5',
-    fontSize: 12,
+    color: colors.textMuted,
+    fontSize: 10,
     fontWeight: '800',
-  },
-  searchInput: {
-    minHeight: 50,
-    borderRadius: 8,
-    backgroundColor: '#222327',
-    borderWidth: 1,
-    borderColor: '#514638',
-    color: '#f8f4ed',
-    fontSize: 15,
-    paddingHorizontal: 14,
-    marginBottom: 16,
+    textTransform: 'uppercase',
   },
   loader: {
-    marginTop: 28,
+    marginTop: 36,
   },
   messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#ffd7d7',
+    color: colors.danger,
     fontSize: 14,
-    lineHeight: 20,
+    fontWeight: '700',
   },
   emptyPanel: {
-    backgroundColor: '#303133',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#444446',
-    padding: 16,
+    borderColor: colors.line,
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  emptyIcon: {
+    marginBottom: spacing.sm,
   },
   emptyText: {
-    color: '#c7c1b7',
+    color: colors.textSubtle,
     fontSize: 14,
+    textAlign: 'center',
     lineHeight: 20,
   },
   perfumeCard: {
-    backgroundColor: '#232428',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#3d3e42',
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
-  bottleMark: {
-    width: 52,
-    height: 62,
-    borderRadius: 8,
-    backgroundColor: '#d8ad62',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottleText: {
-    color: '#1f1f20',
-    fontSize: 22,
-    fontWeight: '900',
+  imageContainer: {
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.sm,
+    padding: 2,
   },
   cardImage: {
-    width: 74,
-    height: 90,
-    borderRadius: 8,
-    backgroundColor: '#1f1f20',
+    width: 62,
+    height: 74,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.background,
+  },
+  bottleMark: {
+    width: 62,
+    height: 74,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.glow,
+  },
+  bottleText: {
+    color: colors.ink,
+    fontSize: 26,
+    fontWeight: '900',
   },
   cardInfo: {
     flex: 1,
   },
   cardTitle: {
-    color: '#f8f4ed',
-    fontSize: 20,
-    fontWeight: '900',
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   cardBrand: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    marginTop: 3,
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  duracionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  duracionText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '600',
   },
   description: {
-    color: '#d7d2ca',
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 14,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.md,
+    fontStyle: 'italic',
   },
   infoGrid: {
+    marginTop: spacing.md,
+    gap: 6,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lineSoft,
+    paddingVertical: 5,
+  },
+  infoLabelBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 120,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  infoLabel: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoValue: {
+    color: colors.textMuted,
+    fontSize: 13,
+    flex: 1,
+    textAlign: 'right',
+  },
+  priceSection: {
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingTop: spacing.md,
+  },
+  priceSectionTitle: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  priceStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginTop: 14,
   },
   pricePill: {
-    backgroundColor: '#2b2c30',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: '#494236',
-    paddingHorizontal: 10,
+    borderColor: colors.lineStrong,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-  },
-  priceStrip: {
-    borderTopWidth: 1,
-    borderTopColor: '#393a3f',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
+    flex: 1,
+    minWidth: 110,
   },
   priceLabel: {
-    color: '#c7c1b7',
-    fontSize: 12,
-    fontWeight: '900',
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
   },
   priceValue: {
-    color: '#f0d19a',
+    color: colors.gold,
     fontSize: 13,
     fontWeight: '900',
-  },
-  infoPill: {
-    backgroundColor: '#2f3035',
-    borderRadius: 8,
-    padding: 12,
-  },
-  infoLabel: {
-    color: '#f0d19a',
-    fontSize: 12,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  infoValue: {
-    color: '#f8f4ed',
-    fontSize: 14,
-    lineHeight: 20,
   },
 });

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
+import MetricCard from '../components/MetricCard';
+import AnimatedPressable from '../components/AnimatedPressable';
+import { colors, radius, spacing, shadow } from '../theme';
 import {
   calculateClientAccount,
   listenAllPayments,
@@ -25,7 +29,6 @@ export default function ClientDetailScreen({ navigation, route }) {
       setSales,
       (firebaseError) => setError(firebaseError.message)
     );
-
     const unsubscribePayments = listenAllPayments(
       setPayments,
       (firebaseError) => setError(firebaseError.message)
@@ -56,10 +59,8 @@ export default function ClientDetailScreen({ navigation, route }) {
     const details = saleDetails.filter((detail) => detail.venta_id === saleId);
     const names = details.map((detail) => {
       const perfume = perfumes.find((perfumeItem) => perfumeItem.id === detail.perfume_id);
-
       return perfume?.nombre || 'Perfume no encontrado';
     });
-
     return names.length ? names.join(', ') : 'Sin detalle de perfume';
   }
 
@@ -67,13 +68,24 @@ export default function ClientDetailScreen({ navigation, route }) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{client.nombre?.charAt(0) || 'C'}</Text>
+          <Text style={styles.avatarText}>{client.nombre?.charAt(0).toUpperCase() || 'C'}</Text>
         </View>
         <View style={styles.heroInfo}>
-          <Text style={styles.kicker}>Cliente</Text>
+          <Text style={styles.kicker}>Ficha de Cliente</Text>
           <Text style={styles.title}>{client.nombre}</Text>
-          <Text style={styles.contactText}>{client.telefono || 'Telefono pendiente'}</Text>
-          {!!client.email && <Text style={styles.contactText}>{client.email}</Text>}
+          
+          {!!client.telefono && (
+            <View style={styles.contactRow}>
+              <Feather name="phone" size={12} color={colors.gold} />
+              <Text style={styles.contactText}>{client.telefono}</Text>
+            </View>
+          )}
+          {!!client.email && (
+            <View style={styles.contactRow}>
+              <Feather name="mail" size={12} color={colors.textSubtle} />
+              <Text style={styles.contactText}>{client.email}</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -84,20 +96,23 @@ export default function ClientDetailScreen({ navigation, route }) {
       )}
 
       <View style={styles.metricsGrid}>
-        <MetricCard label="Total comprado" value={`$${account.totalComprado}`} />
-        <MetricCard label="Total pagado" value={`$${account.totalPagado}`} />
-        <MetricCard label="Debe" value={`$${account.deuda}`} highlight />
+        <MetricCard label="Total Comprado" value={`$${account.totalComprado}`} />
+        <MetricCard label="Total Abonado" value={`$${account.totalPagado}`} />
+        <MetricCard label="Saldo Pendiente" value={`$${account.deuda}`} highlight />
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Historial de compras</Text>
+        <View style={styles.panelHeader}>
+          <Feather name="clock" size={16} color={colors.gold} />
+          <Text style={styles.panelTitle}>Historial de Compras</Text>
+        </View>
         {sales.length === 0 ? (
           <Text style={styles.emptyText}>
-            Aun no hay ventas registradas para este cliente.
+            Aún no hay ventas registradas para este cliente.
           </Text>
         ) : (
           sales.map((sale) => (
-            <Pressable
+            <AnimatedPressable
               key={sale.id}
               onPress={() =>
                 navigation.navigate('SaleDetail', {
@@ -105,192 +120,203 @@ export default function ClientDetailScreen({ navigation, route }) {
                   client,
                 })
               }
-              style={({ pressed }) => [styles.saleItem, pressed && styles.saleItemPressed]}
+              style={styles.saleItem}
+              scaleTo={0.98}
             >
-              <View>
-                <Text style={styles.saleTitle}>Venta ${sale.total || 0}</Text>
-                <Text style={styles.salePerfume}>{getSalePerfumeNames(sale.id)}</Text>
-                <Text style={styles.saleText}>
-                  {formatDateValue(sale.fecha_venta)} - {sale.estado_pago || 'sin estado'}
-                </Text>
+              <View style={styles.saleItemBody}>
+                <View style={styles.saleTextGroup}>
+                  <Text style={styles.saleTitle}>Compra ${sale.total || 0}</Text>
+                  <Text style={styles.salePerfume}>{getSalePerfumeNames(sale.id)}</Text>
+                  <View style={styles.dateStatusRow}>
+                    <Feather name="calendar" size={11} color={colors.textSubtle} />
+                    <Text style={styles.saleText}>{formatDateValue(sale.fecha_venta)}</Text>
+                    <Text style={styles.dividerDot}>·</Text>
+                    <Text style={[styles.saleText, { color: sale.estado_pago === 'liquidado' ? colors.success : colors.gold, fontWeight: '750' }]}>
+                      {sale.estado_pago?.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.textSubtle} />
               </View>
-              <Text style={styles.saleValue}>${sale.total || 0}</Text>
-            </Pressable>
+            </AnimatedPressable>
           ))
         )}
       </View>
 
       {!!client.notas && (
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Notas</Text>
-          <Text style={styles.notes}>{client.notas}</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="file-text" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Notas & Preferencias</Text>
+          </View>
+          <View style={styles.notesContainer}>
+            <Text style={styles.notes}>{client.notas}</Text>
+          </View>
         </View>
       )}
     </ScrollView>
   );
 }
 
-function MetricCard({ label, value, highlight = false }) {
-  return (
-    <View style={[styles.metricCard, highlight && styles.metricHighlight]}>
-      <Text style={[styles.metricLabel, highlight && styles.metricLabelHighlight]}>
-        {label}
-      </Text>
-      <Text style={[styles.metricValue, highlight && styles.metricValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 18,
+    padding: spacing.md,
     paddingBottom: 34,
   },
   hero: {
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 16,
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 8,
-    backgroundColor: '#d8ad62',
+    width: 64,
+    height: 64,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.glow,
   },
   avatarText: {
-    color: '#1f1f20',
-    fontSize: 28,
-    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 26,
+    fontWeight: '900',
   },
   heroInfo: {
     flex: 1,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 6,
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
   },
   contactText: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    marginTop: 3,
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '600',
   },
   messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#ffd7d7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
   },
   metricsGrid: {
-    gap: 10,
-    marginBottom: 14,
-  },
-  metricCard: {
-    backgroundColor: '#303133',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#444446',
-    padding: 16,
-  },
-  metricHighlight: {
-    backgroundColor: '#d8ad62',
-    borderColor: '#d8ad62',
-  },
-  metricLabel: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  metricLabelHighlight: {
-    color: '#3a2a14',
-  },
-  metricValue: {
-    color: '#f8f4ed',
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  metricValueHighlight: {
-    color: '#1f1f20',
+    gap: 8,
+    marginBottom: spacing.md,
   },
   panel: {
-    backgroundColor: '#303133',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#444446',
-    padding: 16,
-    marginBottom: 14,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.md,
   },
   panelTitle: {
-    color: '#f8f4ed',
-    fontSize: 20,
+    color: colors.text,
+    fontSize: 17,
     fontWeight: '800',
-    marginBottom: 12,
+    letterSpacing: -0.2,
   },
   emptyText: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.textSubtle,
+    fontSize: 13,
+    lineHeight: 18,
   },
   saleItem: {
-    backgroundColor: '#3b3b3d',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
     marginBottom: 8,
+  },
+  saleItemBody: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
-  saleItemPressed: {
-    opacity: 0.84,
+  saleTextGroup: {
+    flex: 1,
   },
   saleTitle: {
-    color: '#f8f4ed',
-    fontSize: 15,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '850',
+  },
+  dateStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
   },
   saleText: {
-    color: '#c7c1b7',
-    fontSize: 13,
-    marginTop: 4,
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  dividerDot: {
+    color: colors.textSubtle,
+    fontSize: 11,
   },
   salePerfume: {
-    color: '#f0d19a',
-    fontSize: 13,
-    marginTop: 4,
+    color: colors.gold,
+    fontSize: 12,
     fontWeight: '800',
+    marginTop: 2,
   },
-  saleValue: {
-    color: '#f0d19a',
-    fontSize: 15,
-    fontWeight: '800',
+  notesContainer: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.md,
   },
   notes: {
-    color: '#d7d2ca',
-    fontSize: 15,
-    lineHeight: 22,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

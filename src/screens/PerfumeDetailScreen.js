@@ -8,9 +8,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
+import AnimatedPressable from '../components/AnimatedPressable';
+import { colors, radius, spacing, shadow } from '../theme';
 import {
   cleanupDuplicatePresentationPrices,
   deactivatePresentationPrice,
@@ -63,7 +66,7 @@ const typeLabels = {
   decant_3ml: '3 ml',
   decant_5ml: '5 ml',
   decant_10ml: '10 ml',
-  botella_completa: 'Botella',
+  botella_completa: 'Botella completa',
 };
 
 export default function PerfumeDetailScreen({ route }) {
@@ -126,7 +129,7 @@ export default function PerfumeDetailScreen({ route }) {
 
   async function handleSavePrice() {
     if (!priceForm.precio_publico.trim()) {
-      Alert.alert('Falta el precio', 'Escribe el precio publico de esta presentacion.');
+      Alert.alert('Falta el precio', 'Escribe el precio público de esta presentación.');
       return;
     }
 
@@ -152,7 +155,7 @@ export default function PerfumeDetailScreen({ route }) {
   function handleDeletePrice(price) {
     Alert.alert(
       'Quitar precio',
-      'El precio se desactivara, no se borrara definitivamente.',
+      'El precio se desactivará, no se borrará definitivamente.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -175,7 +178,7 @@ export default function PerfumeDetailScreen({ route }) {
 
   async function handleSavePurchase() {
     if (!purchaseForm.ml_iniciales.trim()) {
-      Alert.alert('Faltan los mililitros', 'Escribe cuantos ml tiene la botella.');
+      Alert.alert('Faltan los mililitros', 'Escribe cuántos ml tiene la botella.');
       return;
     }
 
@@ -204,7 +207,7 @@ export default function PerfumeDetailScreen({ route }) {
     }
 
     if (!stockEditForm.ml_restantes.trim()) {
-      Alert.alert('Faltan mililitros', 'Escribe cuantos ml quedan disponibles.');
+      Alert.alert('Faltan mililitros', 'Escribe cuántos ml quedan disponibles.');
       return;
     }
 
@@ -235,7 +238,7 @@ export default function PerfumeDetailScreen({ route }) {
           <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
         </View>
         <View style={styles.heroInfo}>
-          <Text style={styles.kicker}>{perfume.marca || 'Marca pendiente'}</Text>
+          <Text style={styles.kicker}>{perfume.marca || 'Marca Exclusiva'}</Text>
           <Text style={styles.title}>{perfume.nombre}</Text>
           {!!perfume.descripcion_olor && (
             <Text style={styles.description}>{perfume.descripcion_olor}</Text>
@@ -250,14 +253,20 @@ export default function PerfumeDetailScreen({ route }) {
       )}
 
       <View style={styles.stockPanel}>
-        <Text style={styles.stockLabel}>Stock disponible</Text>
-        <Text style={styles.stockValue}>{totalStock} ml</Text>
+        <View>
+          <Text style={styles.stockLabel}>Stock Total Disponible</Text>
+          <Text style={styles.stockValue}>{totalStock} ml</Text>
+        </View>
+        <Feather name="droplet" size={32} color={colors.gold} style={styles.stockIcon} />
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Precios por presentacion</Text>
+        <View style={styles.panelHeader}>
+          <Feather name="tag" size={16} color={colors.gold} />
+          <Text style={styles.panelTitle}>Precios por Presentación</Text>
+        </View>
         {prices.length === 0 ? (
-          <Text style={styles.emptyText}>Aun no hay precios guardados.</Text>
+          <Text style={styles.emptyText}>Aún no hay precios guardados para este perfume.</Text>
         ) : (
           prices.map((price) => (
             <View key={price.id} style={styles.rowItem}>
@@ -267,19 +276,21 @@ export default function PerfumeDetailScreen({ route }) {
               </View>
               <View style={styles.priceActions}>
                 <Text style={styles.rowValue}>${price.precio_publico}</Text>
-                <Pressable onPress={() => handleEditPrice(price)} style={styles.smallButton}>
-                  <Text style={styles.smallButtonText}>Editar</Text>
-                </Pressable>
-                <Pressable onPress={() => handleDeletePrice(price)} style={styles.smallButtonDark}>
-                  <Text style={styles.smallButtonTextLight}>Quitar</Text>
-                </Pressable>
+                <View style={styles.actionButtonsInline}>
+                  <Pressable onPress={() => handleEditPrice(price)} style={styles.smallButton}>
+                    <Feather name="edit-2" size={11} color={colors.ink} />
+                  </Pressable>
+                  <Pressable onPress={() => handleDeletePrice(price)} style={styles.smallButtonDark}>
+                    <Feather name="eye-off" size={11} color={colors.textMuted} />
+                  </Pressable>
+                </View>
               </View>
             </View>
           ))
         )}
 
         <Text style={styles.formTitle}>
-          {priceForm.id ? 'Editar precio' : 'Agregar o actualizar precio'}
+          {priceForm.id ? 'Editar presentación' : 'Agregar presentación'}
         </Text>
         <View style={styles.segmentRow}>
           {presentationTypes.map((type) => (
@@ -303,21 +314,21 @@ export default function PerfumeDetailScreen({ route }) {
           ))}
         </View>
         <FormInput
-          label="Precio publico"
+          label="Precio Público"
           value={priceForm.precio_publico}
           onChangeText={(value) => updatePriceField('precio_publico', value)}
           placeholder="Ej. 180"
           keyboardType="numeric"
         />
         <PrimaryButton
-          title={savingPrice ? 'Guardando...' : priceForm.id ? 'Actualizar precio' : 'Guardar precio'}
+          title={savingPrice ? 'Guardando...' : priceForm.id ? 'Actualizar Precio' : 'Guardar Precio'}
           onPress={handleSavePrice}
           disabled={savingPrice}
         />
         {priceForm.id && (
           <View style={styles.cancelEdit}>
             <PrimaryButton
-              title="Cancelar edicion"
+              title="Cancelar Edición"
               onPress={() => setPriceForm(initialPriceForm)}
               variant="secondary"
             />
@@ -326,36 +337,39 @@ export default function PerfumeDetailScreen({ route }) {
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Registrar compra</Text>
+        <View style={styles.panelHeader}>
+          <Feather name="plus-circle" size={16} color={colors.gold} />
+          <Text style={styles.panelTitle}>Registrar Lote / Compra</Text>
+        </View>
         <Text style={styles.emptyText}>
-          Las compras quedan separadas del precio publico. Aqui se guarda costo y mililitros disponibles.
+          Las compras son independientes del precio público. Permiten registrar el costo del lote y medir los mililitros disponibles.
         </Text>
         <FormInput
-          label="Mililitros iniciales"
+          label="Mililitros Iniciales"
           value={purchaseForm.ml_iniciales}
           onChangeText={(value) => updatePurchaseField('ml_iniciales', value)}
           placeholder="Ej. 100"
           keyboardType="numeric"
         />
         <FormInput
-          label="Costo de compra"
+          label="Costo de Compra"
           value={purchaseForm.costo_compra}
           onChangeText={(value) => updatePurchaseField('costo_compra', value)}
           placeholder="Ej. 2100"
           keyboardType="numeric"
         />
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Tuvo descuento</Text>
+          <Text style={styles.switchLabel}>¿Tuvo Descuento?</Text>
           <Switch
             value={purchaseForm.tuvo_descuento}
             onValueChange={(value) => updatePurchaseField('tuvo_descuento', value)}
-            thumbColor={purchaseForm.tuvo_descuento ? '#d8ad62' : '#8f8f91'}
-            trackColor={{ false: '#4b4b4d', true: '#80663a' }}
+            thumbColor={purchaseForm.tuvo_descuento ? colors.text : colors.textSubtle}
+            trackColor={{ false: '#24262E', true: colors.gold }}
           />
         </View>
         {purchaseForm.tuvo_descuento && (
           <FormInput
-            label="Costo con descuento"
+            label="Costo con Descuento"
             value={purchaseForm.costo_con_descuento}
             onChangeText={(value) => updatePurchaseField('costo_con_descuento', value)}
             placeholder="Ej. 1800"
@@ -363,7 +377,7 @@ export default function PerfumeDetailScreen({ route }) {
           />
         )}
         <FormInput
-          label="Fecha de compra"
+          label="Fecha de Compra"
           value={purchaseForm.fecha_compra}
           onChangeText={(value) => updatePurchaseField('fecha_compra', value)}
           placeholder="AAAA-MM-DD"
@@ -375,23 +389,26 @@ export default function PerfumeDetailScreen({ route }) {
           placeholder="Ej. Liverpool"
         />
         <FormInput
-          label="Notas"
+          label="Notas del lote"
           value={purchaseForm.notas}
           onChangeText={(value) => updatePurchaseField('notas', value)}
-          placeholder="Detalle opcional de la compra"
+          placeholder="Comentarios adicionales"
           multiline
         />
         <PrimaryButton
-          title={savingPurchase ? 'Guardando...' : 'Guardar compra'}
+          title={savingPurchase ? 'Registrando...' : 'Registrar Compra'}
           onPress={handleSavePurchase}
           disabled={savingPurchase}
         />
       </View>
 
       <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Inventario disponible</Text>
+        <View style={styles.panelHeader}>
+          <Feather name="database" size={16} color={colors.gold} />
+          <Text style={styles.panelTitle}>Lotes con Stock Activo</Text>
+        </View>
         {purchases.length === 0 ? (
-          <Text style={styles.emptyText}>Aun no hay compras registradas.</Text>
+          <Text style={styles.emptyText}>No hay compras registradas para este perfume.</Text>
         ) : (
           availablePurchases.map((purchase) => (
             <View key={purchase.id} style={styles.purchaseItem}>
@@ -422,7 +439,10 @@ export default function PerfumeDetailScreen({ route }) {
 
       {exhaustedPurchases.length > 0 && (
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Inventario agotado</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="archive" size={16} color={colors.textSubtle} />
+            <Text style={styles.panelTitle}>Lotes Agotados</Text>
+          </View>
           {exhaustedPurchases.map((purchase) => (
             <View key={purchase.id} style={styles.exhaustedItem}>
               <InventoryPurchase
@@ -465,23 +485,25 @@ function InventoryPurchase({
   if (isEditing) {
     return (
       <View style={styles.inventoryEditBox}>
-        <Text style={styles.formTitle}>Editar stock disponible</Text>
+        <Text style={styles.formTitle}>Ajustar Stock Disponible</Text>
         <FormInput
-          label="Ml restantes"
+          label="Mililitros Restantes"
           value={editForm.ml_restantes}
           onChangeText={(value) => onChange('ml_restantes', value)}
           placeholder="Ej. 35"
           keyboardType="numeric"
         />
         <FormInput
-          label="Nota del ajuste"
+          label="Motivo del Ajuste"
           value={editForm.notas_ajuste_stock}
           onChangeText={(value) => onChange('notas_ajuste_stock', value)}
-          placeholder="Ej. Conteo manual"
+          placeholder="Ej. Conteo manual, evaporación..."
         />
         <View style={styles.stockEditActions}>
-          <PrimaryButton title="Cancelar" onPress={onCancel} variant="secondary" />
-          <PrimaryButton title={saving ? 'Guardando...' : 'Guardar stock'} onPress={onSave} disabled={saving} />
+          <PrimaryButton title="Guardar Cambios" onPress={onSave} disabled={saving} />
+          <View style={{ marginTop: 4 }}>
+            <PrimaryButton title="Cancelar" onPress={onCancel} variant="secondary" />
+          </View>
         </View>
       </View>
     );
@@ -490,22 +512,25 @@ function InventoryPurchase({
   return (
     <>
       <View style={styles.rowTextGroup}>
-        <Text style={styles.rowTitle}>
-          {exhausted ? 'Agotado' : `${purchase.ml_restantes} ml de ${purchase.ml_iniciales} ml`}
+        <Text style={[styles.rowTitle, exhausted && { color: colors.textSubtle }]}>
+          {exhausted ? 'Agotado' : `${purchase.ml_restantes} ml / ${purchase.ml_iniciales} ml`}
         </Text>
         <Text style={styles.rowSubtext}>
-          {purchase.proveedor || 'Proveedor pendiente'} - {formatDateValue(purchase.fecha_compra)}
+          Lote: {purchase.proveedor || 'Proveedor pendiente'}  ·  {formatDateValue(purchase.fecha_compra)}
         </Text>
         {!!purchase.notas_ajuste_stock && (
-          <Text style={styles.rowSubtext}>Ajuste: {purchase.notas_ajuste_stock}</Text>
+          <Text style={[styles.rowSubtext, { fontStyle: 'italic', color: colors.gold }]}>
+            Nota de ajuste: {purchase.notas_ajuste_stock}
+          </Text>
         )}
       </View>
       <View style={styles.inventoryActions}>
         <Text style={exhausted ? styles.exhaustedBadge : styles.rowValue}>
           {exhausted ? '0 ml' : `$${purchase.costo_compra}`}
         </Text>
-        <Pressable onPress={onEdit} style={styles.smallButton}>
-          <Text style={styles.smallButtonText}>Editar stock</Text>
+        <Pressable onPress={onEdit} style={styles.adjustStockButton}>
+          <Feather name="edit" size={11} color={colors.ink} style={{ marginRight: 4 }} />
+          <Text style={styles.adjustStockButtonText}>Ajustar</Text>
         </Pressable>
       </View>
     </>
@@ -515,117 +540,133 @@ function InventoryPurchase({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#151518',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 18,
-    paddingBottom: 180,
+    padding: spacing.md,
+    paddingBottom: 80,
   },
   hero: {
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 16,
-    backgroundColor: '#222329',
-    borderRadius: 8,
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#34353a',
-    padding: 14,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   bottleMark: {
-    width: 68,
-    height: 82,
-    borderRadius: 8,
-    backgroundColor: '#d9ad69',
+    width: 64,
+    height: 76,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.glow,
   },
   bottleText: {
-    color: '#1f1f20',
-    fontSize: 28,
-    fontWeight: '800',
+    color: colors.ink,
+    fontSize: 26,
+    fontWeight: '900',
   },
   heroInfo: {
     flex: 1,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 8,
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   description: {
-    color: '#c7c1b7',
-    fontSize: 15,
-    lineHeight: 22,
+    color: colors.textSubtle,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#ffd7d7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
   },
   stockPanel: {
-    backgroundColor: '#24201c',
-    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#4d3e2b',
-    padding: 18,
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.glow,
   },
   stockLabel: {
-    color: '#d8c0a0',
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   stockValue: {
-    color: '#f8f4ed',
-    fontSize: 34,
+    color: colors.text,
+    fontSize: 28,
     fontWeight: '900',
   },
   panel: {
-    backgroundColor: '#222329',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#34353a',
-    padding: 16,
-    marginBottom: 14,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.md,
   },
   panelTitle: {
-    color: '#f8f4ed',
-    fontSize: 20,
+    color: colors.text,
+    fontSize: 17,
     fontWeight: '800',
-    marginBottom: 12,
+    letterSpacing: -0.2,
   },
   emptyText: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
+    color: colors.textSubtle,
+    fontSize: 13,
+    lineHeight: 18,
   },
   rowItem: {
-    minHeight: 54,
-    backgroundColor: '#2b2c31',
-    borderRadius: 8,
-    padding: 12,
+    minHeight: 52,
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -636,9 +677,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   purchaseItem: {
-    backgroundColor: '#2b2c31',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -647,130 +690,150 @@ const styles = StyleSheet.create({
   },
   inventoryActions: {
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 6,
   },
   inventoryEditBox: {
     flex: 1,
   },
   stockEditActions: {
-    gap: 10,
+    marginTop: 6,
   },
   rowTitle: {
-    color: '#f8f4ed',
-    fontSize: 15,
-    fontWeight: '700',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
   },
   rowSubtext: {
-    color: '#c7c1b7',
-    fontSize: 13,
-    marginTop: 4,
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   rowValue: {
-    color: '#f0d19a',
-    fontSize: 15,
+    color: colors.gold,
+    fontSize: 14,
     fontWeight: '800',
   },
   priceActions: {
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 6,
+  },
+  actionButtonsInline: {
+    flexDirection: 'row',
+    gap: 4,
   },
   smallButton: {
-    backgroundColor: '#d8ad62',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    width: 26,
+    height: 26,
+    backgroundColor: colors.gold,
+    borderRadius: radius.sm - 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   smallButtonDark: {
-    backgroundColor: '#4a4a4c',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    width: 26,
+    height: 26,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.sm - 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  smallButtonText: {
-    color: '#1f1f20',
-    fontSize: 12,
-    fontWeight: '900',
+  adjustStockButton: {
+    backgroundColor: colors.gold,
+    borderRadius: radius.sm - 2,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  smallButtonTextLight: {
-    color: '#f8f4ed',
-    fontSize: 12,
+  adjustStockButtonText: {
+    color: colors.ink,
+    fontSize: 10,
     fontWeight: '900',
   },
   cancelEdit: {
-    marginTop: 10,
+    marginTop: 8,
   },
   exhaustedItem: {
-    backgroundColor: '#252329',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: '#4a3b3b',
-    padding: 12,
+    borderColor: colors.line,
+    padding: spacing.sm,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    opacity: 0.72,
+    opacity: 0.6,
   },
   exhaustedBadge: {
-    color: '#ffd7d7',
-    backgroundColor: '#5a3333',
-    borderRadius: 8,
+    color: colors.textSubtle,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
     overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 12,
-    fontWeight: '900',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
+    fontWeight: '800',
   },
   formTitle: {
-    color: '#f0d19a',
-    fontSize: 16,
-    fontWeight: '800',
-    marginTop: 12,
-    marginBottom: 12,
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
   segmentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: 6,
+    marginBottom: spacing.md,
   },
   segment: {
-    minHeight: 40,
-    borderRadius: 8,
-    backgroundColor: '#3b3b3d',
+    minHeight: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#565658',
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 13,
+    paddingHorizontal: 12,
   },
   segmentActive: {
-    backgroundColor: '#d8ad62',
-    borderColor: '#d8ad62',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+    ...shadow.glow,
   },
   segmentText: {
-    color: '#f8f4ed',
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '800',
   },
   segmentTextActive: {
-    color: '#1f1f20',
+    color: colors.ink,
   },
   switchRow: {
     minHeight: 48,
-    borderRadius: 8,
-    backgroundColor: '#343436',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#4b4b4d',
-    paddingHorizontal: 14,
-    marginBottom: 16,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   switchLabel: {
-    color: '#f0d19a',
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

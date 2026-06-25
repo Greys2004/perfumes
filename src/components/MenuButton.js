@@ -1,12 +1,13 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import AnimatedPressable from './AnimatedPressable';
+import { colors } from '../theme';
 
 export default function MenuButton({ onPress }) {
   return (
-    <Pressable onPress={onPress} style={styles.button}>
-      <View style={styles.line} />
-      <View style={styles.line} />
-      <View style={styles.line} />
-    </Pressable>
+    <AnimatedPressable onPress={onPress} style={styles.button}>
+      <Feather name="menu" size={22} color={colors.gold} />
+    </AnimatedPressable>
   );
 }
 
@@ -14,19 +15,12 @@ const styles = StyleSheet.create({
   button: {
     width: 42,
     height: 42,
-    borderRadius: 8,
-    backgroundColor: '#1b1c21',
+    borderRadius: 10,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: '#3a332c',
+    borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
-  },
-  line: {
-    width: 20,
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: '#d9ad69',
-    marginVertical: 2,
   },
 });

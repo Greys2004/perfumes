@@ -9,9 +9,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
+import AnimatedPressable from '../components/AnimatedPressable';
+import { colors, radius, spacing, shadow } from '../theme';
 import { listenClients } from '../services/clientsService';
 import { listenActivePerfumes } from '../services/perfumesService';
 import {
@@ -268,10 +271,10 @@ export default function SaleFormScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <Text style={styles.kicker}>Nueva venta</Text>
-        <Text style={styles.title}>Crear venta</Text>
+        <Text style={styles.kicker}>Transacciones</Text>
+        <Text style={styles.title}>Nueva Venta</Text>
         <Text style={styles.subtitle}>
-          Selecciona cliente, perfume, presentacion y la compra que se descontara del inventario.
+          Registra una venta descontando los mililitros directamente de tus lotes de compras activos.
         </Text>
 
         {!!error && (
@@ -281,29 +284,40 @@ export default function SaleFormScreen({ navigation }) {
         )}
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Cliente</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="user" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Seleccionar Cliente</Text>
+          </View>
           <OptionGrid
             items={clients}
             selectedId={form.cliente_id}
             getLabel={(client) => client.nombre}
-            emptyText="Primero registra un cliente."
+            emptyText="Primero registra un cliente en el directorio."
             onSelect={(client) => updateField('cliente_id', client.id)}
           />
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Perfume</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="tag" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Seleccionar Perfume</Text>
+          </View>
           <OptionGrid
             items={perfumes}
             selectedId={form.perfume_id}
-            getLabel={(perfume) => `${perfume.nombre} - ${perfume.marca || 'Sin marca'}`}
-            emptyText="Primero registra un perfume."
+            getLabel={(perfume) => `${perfume.nombre} (de ${perfume.marca || 'Marca Exclusiva'})`}
+            emptyText="Primero registra un perfume en el catálogo."
             onSelect={selectPerfume}
           />
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Presentacion</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="box" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Presentación & Cantidad</Text>
+          </View>
+          
+          <Text style={[styles.sectionHeading, { marginBottom: 8 }]}>Tipo de decant / botella</Text>
           <View style={styles.segmentRow}>
             {presentationTypes.map((type) => (
               <Pressable
@@ -326,7 +340,7 @@ export default function SaleFormScreen({ navigation }) {
             ))}
           </View>
           <Text style={styles.hint}>
-            Precio sugerido: {selectedPrice ? `$${selectedPrice.precio_publico}` : 'sin precio guardado'}
+            Sugerencia pública: {selectedPrice ? `$${selectedPrice.precio_publico}` : 'Sin precio configurado'}
           </Text>
 
           <FormInput
@@ -337,73 +351,91 @@ export default function SaleFormScreen({ navigation }) {
             keyboardType="numeric"
           />
           <FormInput
-            label="Ml vendidos"
+            label="Ml Vendidos"
             value={form.ml_vendidos}
             onChangeText={(value) => updateField('ml_vendidos', value)}
             placeholder="Ej. 3"
             keyboardType="numeric"
           />
           <FormInput
-            label="Precio unitario"
+            label="Precio Unitario"
             value={form.precio_unitario}
             onChangeText={(value) => updateField('precio_unitario', value)}
             placeholder="Ej. 180"
             keyboardType="numeric"
           />
-          <Text style={styles.totalText}>Total: ${total}</Text>
+
+          <View style={styles.totalBlock}>
+            <Text style={styles.totalLabel}>TOTAL A PAGAR</Text>
+            <Text style={styles.totalText}>${total}</Text>
+          </View>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Compra para descontar stock</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="database" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Inventario Utilizado</Text>
+          </View>
           <Text style={styles.hint}>
-            Se seleccionan automaticamente de menor a mayor stock para acabar primero la botella con menos ml.
+            La app selecciona automáticamente el lote con menos stock activo para optimizar la salida de botellas abiertas.
           </Text>
           <OptionGrid
             items={availablePurchases}
             selectedIds={form.compra_ids}
             multi
             getLabel={(purchase) =>
-              `${purchase.ml_restantes} ml disponibles${purchase.proveedor ? ` - ${purchase.proveedor}` : ''}`
+              `${purchase.ml_restantes} ml disponibles  ·  Lote: ${purchase.proveedor || 'Sin proveedor'}`
             }
-            emptyText="No hay compras con stock para este perfume."
+            emptyText="No hay compras de lotes con stock para esta fragancia."
             onSelect={() => {}}
           />
           {form.compra_ids.length > 0 && (
-            <Text style={styles.selectedStockText}>Seleccionado: {selectedStockMl} ml</Text>
+            <View style={styles.selectedStockWrapper}>
+              <Feather name="check" size={14} color={colors.success} style={{ marginRight: 4 }} />
+              <Text style={styles.selectedStockText}>Stock disponible seleccionado: {selectedStockMl} ml</Text>
+            </View>
           )}
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Pago inicial</Text>
+          <View style={styles.panelHeader}>
+            <Feather name="credit-card" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Pago Inicial & Fecha</Text>
+          </View>
           <FormInput
-            label="Pago inicial"
+            label="Pago Inicial (Opcional)"
             value={form.pago_inicial}
             onChangeText={(value) => updateField('pago_inicial', value)}
             placeholder="Ej. 100"
             keyboardType="numeric"
           />
           <FormInput
-            label="Metodo de pago"
+            label="Método de Pago inicial"
             value={form.metodo_pago}
             onChangeText={(value) => updateField('metodo_pago', value)}
-            placeholder="Efectivo, transferencia, tarjeta"
+            placeholder="Efectivo, transferencia, tarjeta..."
           />
+          
           <DateSelector
             value={form.fecha_venta}
             onChange={(value) => updateField('fecha_venta', value)}
           />
+          
           <FormInput
-            label="Notas"
+            label="Notas Internas"
             value={form.notas}
             onChangeText={(value) => updateField('notas', value)}
-            placeholder="Detalle opcional"
+            placeholder="Comentarios o indicaciones de la venta"
             multiline
           />
-          <PrimaryButton
-            title={saving ? 'Guardando...' : 'Guardar venta'}
-            onPress={handleSave}
-            disabled={saving}
-          />
+          
+          <View style={{ marginTop: spacing.md }}>
+            <PrimaryButton
+              title={saving ? 'Guardando Venta...' : 'Registrar Venta'}
+              onPress={handleSave}
+              disabled={saving}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -417,7 +449,7 @@ function DateSelector({ value, onChange }) {
     <View style={styles.dateBox}>
       <View style={styles.dateHeader}>
         <View>
-          <Text style={styles.dateLabel}>Fecha de venta</Text>
+          <Text style={styles.dateLabel}>Fecha de Venta</Text>
           <Text style={styles.dateValue}>{value}</Text>
         </View>
         <Pressable onPress={() => onChange(getLocalDateString())} style={styles.todayButton}>
@@ -427,10 +459,12 @@ function DateSelector({ value, onChange }) {
 
       <View style={styles.dateControls}>
         <Pressable onPress={() => onChange(addDays(value, -1))} style={styles.dateStepButton}>
-          <Text style={styles.dateStepText}>Anterior</Text>
+          <Feather name="chevron-left" size={14} color={colors.text} style={{ marginRight: 4 }} />
+          <Text style={styles.dateStepText}>Ayer</Text>
         </Pressable>
         <Pressable onPress={() => onChange(addDays(value, 1))} style={styles.dateStepButton}>
-          <Text style={styles.dateStepText}>Siguiente</Text>
+          <Text style={styles.dateStepText}>Mañana</Text>
+          <Feather name="chevron-right" size={14} color={colors.text} style={{ marginLeft: 4 }} />
         </Pressable>
       </View>
 
@@ -474,9 +508,12 @@ function OptionGrid({ items, selectedId, selectedIds = [], multi = false, getLab
             onPress={() => onSelect(item)}
             style={[styles.option, isSelected && styles.optionActive]}
           >
-            <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
-              {getLabel(item)}
-            </Text>
+            <View style={styles.optionContent}>
+              <View style={[styles.optionDot, isSelected && styles.optionDotActive]} />
+              <Text style={[styles.optionText, isSelected && styles.optionTextActive]}>
+                {getLabel(item)}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
@@ -487,222 +524,280 @@ function OptionGrid({ items, selectedId, selectedIds = [], multi = false, getLab
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 18,
-    paddingBottom: 180,
+    padding: spacing.md,
+    paddingBottom: 80,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 8,
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
   subtitle: {
-    color: '#c7c1b7',
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 18,
+    color: colors.textSubtle,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
   },
   panel: {
-    backgroundColor: '#303133',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#444446',
-    padding: 16,
-    marginBottom: 14,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.md,
   },
   panelTitle: {
-    color: '#f8f4ed',
-    fontSize: 19,
+    color: colors.text,
+    fontSize: 17,
     fontWeight: '800',
-    marginBottom: 12,
+    letterSpacing: -0.2,
   },
   optionGrid: {
     gap: 8,
   },
   option: {
     minHeight: 46,
-    borderRadius: 8,
-    backgroundColor: '#3b3b3d',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#565658',
+    borderColor: colors.line,
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.sm,
   },
   optionActive: {
-    backgroundColor: '#d8ad62',
-    borderColor: '#d8ad62',
+    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+    borderColor: colors.gold,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  optionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.lineStrong,
+  },
+  optionDotActive: {
+    backgroundColor: colors.gold,
+    ...shadow.glow,
   },
   optionText: {
-    color: '#f8f4ed',
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: 13,
     fontWeight: '700',
   },
   optionTextActive: {
-    color: '#1f1f20',
+    color: colors.gold,
   },
   segmentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 8,
   },
   segment: {
-    minHeight: 40,
-    borderRadius: 8,
-    backgroundColor: '#3b3b3d',
+    minHeight: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#565658',
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 13,
+    paddingHorizontal: 12,
   },
   segmentActive: {
-    backgroundColor: '#d8ad62',
-    borderColor: '#d8ad62',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+    ...shadow.glow,
   },
   segmentText: {
-    color: '#f8f4ed',
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '800',
   },
   segmentTextActive: {
-    color: '#1f1f20',
+    color: colors.ink,
+  },
+  sectionHeading: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '850',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   hint: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    marginBottom: 12,
+    color: colors.textSubtle,
+    fontSize: 12,
+    marginBottom: spacing.md,
+    fontStyle: 'italic',
+  },
+  totalBlock: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    ...shadow.glow,
+  },
+  totalLabel: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   totalText: {
-    color: '#f0d19a',
-    fontSize: 20,
+    color: colors.text,
+    fontSize: 28,
     fontWeight: '900',
-    marginBottom: 4,
+    letterSpacing: -0.5,
+    marginTop: 4,
+  },
+  selectedStockWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
   },
   selectedStockText: {
-    color: '#6db28f',
-    fontSize: 14,
-    fontWeight: '900',
-    marginTop: 10,
+    color: colors.success,
+    fontSize: 12,
+    fontWeight: '800',
   },
   dateBox: {
-    backgroundColor: '#24252a',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: '#4f463b',
-    padding: 12,
-    marginBottom: 16,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   dateHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   dateLabel: {
-    color: '#f0d19a',
-    fontSize: 14,
-    fontWeight: '900',
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   dateValue: {
-    color: '#f8f4ed',
+    color: colors.text,
     fontSize: 18,
     fontWeight: '900',
   },
   todayButton: {
-    minHeight: 38,
-    borderRadius: 8,
-    backgroundColor: '#d8ad62',
+    minHeight: 32,
+    borderRadius: radius.sm - 4,
+    backgroundColor: colors.gold,
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
   todayButtonText: {
-    color: '#1f1f20',
-    fontSize: 13,
+    color: colors.ink,
+    fontSize: 12,
     fontWeight: '900',
   },
   dateControls: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   dateStepButton: {
     flex: 1,
-    minHeight: 38,
-    borderRadius: 8,
-    backgroundColor: '#303133',
+    minHeight: 34,
+    borderRadius: radius.sm - 4,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: '#4b4b4d',
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
   dateStepText: {
-    color: '#f8f4ed',
-    fontSize: 13,
-    fontWeight: '800',
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   weekRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   dayButton: {
     flex: 1,
-    minHeight: 54,
-    borderRadius: 8,
-    backgroundColor: '#303133',
+    minHeight: 48,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: '#444446',
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayButtonActive: {
-    backgroundColor: '#d8ad62',
-    borderColor: '#d8ad62',
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+    ...shadow.glow,
   },
   dayLabel: {
-    color: '#c7c1b7',
-    fontSize: 11,
+    color: colors.textSubtle,
+    fontSize: 9,
     fontWeight: '900',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   dayLabelActive: {
-    color: '#3a2a14',
+    color: colors.ink,
   },
   dayNumber: {
-    color: '#f8f4ed',
-    fontSize: 15,
-    fontWeight: '900',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '850',
   },
   dayNumberActive: {
-    color: '#1f1f20',
+    color: colors.ink,
   },
   emptyText: {
-    color: '#c7c1b7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.textSubtle,
+    fontSize: 13,
   },
   messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 14,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: '#ffd7d7',
-    fontSize: 14,
-    lineHeight: 20,
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

@@ -10,9 +10,11 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
+import { colors, radius, spacing, shadow } from '../theme';
 import { createPerfume, updatePerfume, uploadPerfumeImage } from '../services/perfumesService';
 
 const initialForm = {
@@ -64,7 +66,7 @@ export default function PerfumeFormScreen({ navigation, route }) {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permiso necesario', 'Necesitamos acceso a tu galeria para elegir una imagen.');
+      Alert.alert('Permiso necesario', 'Necesitamos acceso a tu galería para elegir una imagen.');
       return;
     }
 
@@ -123,90 +125,111 @@ export default function PerfumeFormScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <Text style={styles.kicker}>{editingPerfume ? 'Editar perfume' : 'Nuevo perfume'}</Text>
-        <Text style={styles.title}>Datos principales</Text>
+        <Text style={styles.kicker}>{editingPerfume ? 'Edición de Fragancia' : 'Nueva Fragancia'}</Text>
+        <Text style={styles.title}>{editingPerfume ? 'Editar Perfume' : 'Registrar Perfume'}</Text>
         <Text style={styles.subtitle}>
-          Empieza con la informacion basica. Despues, desde el detalle del perfume, podras agregar precios y compras.
+          Ingresa la información básica y descriptores olfativos. Posteriormente, podrás registrar lotes de stock y asignar precios por ml.
         </Text>
 
         <View style={styles.formPanel}>
-          {!!form.imagen && <Image source={{ uri: form.imagen }} style={styles.previewImage} />}
+          {!!form.imagen && (
+            <View style={styles.imageWrapper}>
+              <Image source={{ uri: form.imagen }} style={styles.previewImage} />
+            </View>
+          )}
           <PrimaryButton
-            title={uploadingImage ? 'Subiendo imagen...' : 'Elegir imagen de galeria'}
+            title={uploadingImage ? 'Subiendo Imagen...' : 'Elegir Imagen de Galería'}
             onPress={handlePickImage}
             disabled={uploadingImage}
             variant="secondary"
           />
           <View style={styles.imageSpace} />
+          
           <FormInput
-            label="Nombre"
+            label="Nombre del Perfume"
             value={form.nombre}
             onChangeText={(value) => updateField('nombre', value)}
             placeholder="Ej. Sauvage"
           />
+          
           <FormInput
-            label="Marca"
+            label="Marca / Diseñador"
             value={form.marca}
             onChangeText={(value) => updateField('marca', value)}
             placeholder="Ej. Dior"
           />
+          
           <FormInput
-            label="URL de imagen"
+            label="Enlace de Imagen (URL alternativa)"
             value={form.imagen}
             onChangeText={(value) => updateField('imagen', value)}
-            placeholder="Opcional por ahora"
+            placeholder="Enlace web opcional"
           />
+          
           <FormInput
-            label="Descripcion del olor"
+            label="Descripción del Aroma"
             value={form.descripcion_olor}
             onChangeText={(value) => updateField('descripcion_olor', value)}
-            placeholder="Ej. Fresco, citrico, amaderado"
+            placeholder="Ej. Fresco, especiado, notas cítricas y amaderadas"
             multiline
           />
+          
           <FormInput
-            label="Duracion"
+            label="Longevidad / Duración estimada"
             value={form.duracion}
             onChangeText={(value) => updateField('duracion', value)}
-            placeholder="Ej. 8 horas"
+            placeholder="Ej. 8 a 10 horas"
           />
+          
           <FormInput
-            label="Mililitros botella completa"
+            label="Capacidad Botella Completa (ml)"
             value={form.ml_botella_completa}
             onChangeText={(value) => updateField('ml_botella_completa', value)}
             placeholder="Ej. 100"
             keyboardType="numeric"
           />
+          
           <FormInput
-            label="Precio Liverpool"
+            label="Precio de referencia (Liverpool)"
             value={form.precio_liverpool}
             onChangeText={(value) => updateField('precio_liverpool', value)}
             placeholder="Ej. 3200"
             keyboardType="numeric"
           />
+
+          <View style={styles.formSectionDivider}>
+            <Feather name="wind" size={13} color={colors.gold} />
+            <Text style={styles.sectionHeading}>Pirámide Olfativa</Text>
+          </View>
+          
           <FormInput
-            label="Notas de salida"
+            label="Notas de Salida (Primer impacto)"
             value={form.notas_salida}
             onChangeText={(value) => updateField('notas_salida', value)}
-            placeholder="Ej. Bergamota, pimienta"
+            placeholder="Ej. Bergamota de Calabria, Pimienta de Sichuan"
           />
+          
           <FormInput
-            label="Notas de corazon"
+            label="Notas de Corazón (Cuerpo del aroma)"
             value={form.notas_corazon}
             onChangeText={(value) => updateField('notas_corazon', value)}
-            placeholder="Ej. Lavanda, geranio"
+            placeholder="Ej. Lavanda, Vetiver, Pachulí"
           />
+          
           <FormInput
-            label="Notas de fondo"
+            label="Notas de Fondo (Base que perdura)"
             value={form.notas_fondo}
             onChangeText={(value) => updateField('notas_fondo', value)}
-            placeholder="Ej. Ambar, cedro"
+            placeholder="Ej. Ambroxan, Cedro, Ládano"
           />
 
-          <PrimaryButton
-            title={saving ? 'Guardando...' : editingPerfume ? 'Actualizar perfume' : 'Guardar perfume'}
-            onPress={handleSave}
-            disabled={saving}
-          />
+          <View style={{ marginTop: spacing.md }}>
+            <PrimaryButton
+              title={saving ? 'Guardando...' : editingPerfume ? 'Actualizar Información' : 'Registrar Perfume'}
+              onPress={handleSave}
+              disabled={saving}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -216,45 +239,73 @@ export default function PerfumeFormScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 18,
-    paddingBottom: 180,
+    padding: spacing.md,
+    paddingBottom: 80,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 8,
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
   subtitle: {
-    color: '#c7c1b7',
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 18,
+    color: colors.textSubtle,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
   },
   formPanel: {
-    backgroundColor: '#303133',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#444446',
-    padding: 16,
+    borderColor: colors.line,
+    padding: spacing.md,
+    ...shadow.card,
+  },
+  imageWrapper: {
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.md,
+    padding: 3,
+    marginBottom: spacing.md,
+    ...shadow.glow,
   },
   previewImage: {
     width: '100%',
     height: 220,
-    borderRadius: 8,
-    marginBottom: 12,
-    backgroundColor: '#1f1f20',
+    borderRadius: radius.md - 3,
+    backgroundColor: colors.backgroundSoft,
   },
   imageSpace: {
-    height: 16,
+    height: 12,
+  },
+  formSectionDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.md,
+  },
+  sectionHeading: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

@@ -6,11 +6,13 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
-import PrimaryButton from '../components/PrimaryButton';
+import SearchBar from '../components/SearchBar';
+import AnimatedPressable from '../components/AnimatedPressable';
+import { colors, radius, spacing, shadow } from '../theme';
 import { deactivateClient, listenClients } from '../services/clientsService';
 
 export default function ClientsListScreen({ navigation }) {
@@ -47,24 +49,25 @@ export default function ClientsListScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.kicker}>Clientes</Text>
-          <Text style={styles.title}>Directorio</Text>
+          <Text style={styles.kicker}>Directorio Comercial</Text>
+          <Text style={styles.title}>Clientes</Text>
         </View>
-        <PrimaryButton
-          title="Agregar"
+        <AnimatedPressable
           onPress={() => navigation.navigate('ClientForm')}
-        />
+          style={styles.addButton}
+        >
+          <Feather name="user-plus" size={15} color={colors.ink} style={{ marginRight: 4 }} />
+          <Text style={styles.addButtonText}>Agregar</Text>
+        </AnimatedPressable>
       </View>
 
-      <TextInput
+      <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por nombre, telefono o email"
-        placeholderTextColor="#8f8f91"
-        style={styles.searchInput}
+        placeholder="Buscar por nombre, teléfono o email..."
       />
 
-      {loading && <ActivityIndicator color="#d8ad62" style={styles.loader} />}
+      {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
 
       {!!error && (
         <View style={styles.messageBox}>
@@ -77,8 +80,12 @@ export default function ClientsListScreen({ navigation }) {
           data={filteredClients}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Todavia no hay clientes registrados.</Text>
+            <View style={styles.emptyContainer}>
+              <Feather name="users" size={24} color={colors.textSubtle} style={{ marginBottom: 8 }} />
+              <Text style={styles.emptyText}>Todavía no hay clientes registrados.</Text>
+            </View>
           }
           renderItem={({ item }) => (
             <ClientCard
@@ -88,7 +95,7 @@ export default function ClientsListScreen({ navigation }) {
               onDelete={() => {
                 Alert.alert(
                   'Desactivar cliente',
-                  'El cliente dejara de aparecer en la lista, pero sus ventas se conservan.',
+                  `¿Deseas quitar a "${item.nombre}"? No se eliminarán sus ventas asociadas.`,
                   [
                     { text: 'Cancelar', style: 'cancel' },
                     {
@@ -109,163 +116,200 @@ export default function ClientsListScreen({ navigation }) {
 
 function ClientCard({ client, onPress, onEdit, onDelete }) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={styles.card}
+      scaleTo={0.98}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{client.nombre?.charAt(0) || 'C'}</Text>
+      <View style={styles.cardBody}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{client.nombre?.charAt(0).toUpperCase() || 'C'}</Text>
+        </View>
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardTitle}>{client.nombre}</Text>
+          {!!client.telefono && (
+            <View style={styles.contactRow}>
+              <Feather name="phone" size={11} color={colors.gold} />
+              <Text style={styles.cardText}>{client.telefono}</Text>
+            </View>
+          )}
+          {!!client.email && (
+            <View style={styles.contactRow}>
+              <Feather name="mail" size={11} color={colors.textSubtle} />
+              <Text style={styles.cardText}>{client.email}</Text>
+            </View>
+          )}
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.textSubtle} />
       </View>
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle}>{client.nombre}</Text>
-        <Text style={styles.cardText}>{client.telefono || 'Telefono pendiente'}</Text>
-        {!!client.email && <Text style={styles.cardText}>{client.email}</Text>}
-      </View>
-      <Text style={styles.openText}>Ver</Text>
-      <View style={styles.actions}>
+
+      <View style={styles.cardFooter}>
         <Pressable onPress={onEdit} style={styles.actionButton}>
+          <Feather name="edit-2" size={12} color={colors.ink} style={{ marginRight: 4 }} />
           <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionButtonDark}>
+          <Feather name="user-minus" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
           <Text style={styles.actionButtonTextLight}>Quitar</Text>
         </Pressable>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#151518',
-    padding: 18,
+    backgroundColor: colors.background,
+    padding: spacing.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 18,
+    marginBottom: spacing.md,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
     marginBottom: 4,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 32,
-    fontWeight: '800',
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
-  searchInput: {
-    minHeight: 50,
-    borderRadius: 8,
-    backgroundColor: '#202126',
-    borderWidth: 1,
-    borderColor: '#514638',
-    color: '#f8f4ed',
-    fontSize: 15,
-    paddingHorizontal: 14,
-    marginBottom: 16,
-  },
-  loader: {
-    marginTop: 28,
-  },
-  messageBox: {
-    backgroundColor: '#3a2d2d',
-    borderColor: '#7f4a4a',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
-  },
-  errorText: {
-    color: '#ffd7d7',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  emptyText: {
-    color: '#c7c1b7',
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 32,
-  },
-  card: {
-    backgroundColor: '#222329',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#34353a',
-    padding: 14,
-    marginBottom: 12,
+  addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    backgroundColor: colors.gold,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    minHeight: 38,
+    ...shadow.glow,
   },
-  cardPressed: {
-    opacity: 0.84,
+  addButtonText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  loader: {
+    marginTop: 36,
+  },
+  messageBox: {
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  listContent: {
+    paddingBottom: 32,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+  },
+  emptyText: {
+    color: colors.textSubtle,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  cardBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 8,
-    backgroundColor: '#d9ad69',
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.glow,
   },
   avatarText: {
-    color: '#1f1f20',
+    color: colors.ink,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   cardInfo: {
     flex: 1,
   },
   cardTitle: {
-    color: '#f8f4ed',
-    fontSize: 17,
+    color: colors.text,
+    fontSize: 16,
     fontWeight: '800',
   },
-  cardText: {
-    color: '#c7c1b7',
-    fontSize: 14,
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginTop: 3,
   },
-  openText: {
-    color: '#f0d19a',
-    fontSize: 14,
-    fontWeight: '800',
+  cardText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '600',
   },
-  actions: {
-    gap: 6,
+  cardFooter: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
   },
   actionButton: {
-    borderRadius: 8,
-    backgroundColor: '#d8ad62',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    flex: 1,
+    minHeight: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionButtonDark: {
-    borderRadius: 8,
-    backgroundColor: '#4a4a4c',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    flex: 1,
+    minHeight: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionButtonText: {
-    color: '#1f1f20',
-    fontSize: 12,
+    color: colors.ink,
+    fontSize: 11,
     fontWeight: '900',
   },
   actionButtonTextLight: {
-    color: '#f8f4ed',
-    fontSize: 12,
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '900',
   },
 });

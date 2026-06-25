@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { colors, radius, spacing } from '../theme';
 
 export default function FormInput({
   label,
@@ -8,6 +10,8 @@ export default function FormInput({
   multiline = false,
   keyboardType = 'default',
 }) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -15,10 +19,16 @@ export default function FormInput({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#8f8f91"
+        placeholderTextColor={colors.textSubtle}
         multiline={multiline}
         keyboardType={keyboardType}
-        style={[styles.input, multiline && styles.multiline]}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        style={[
+          styles.input,
+          multiline && styles.multiline,
+          isFocused && styles.focusedInput
+        ]}
       />
     </View>
   );
@@ -26,31 +36,32 @@ export default function FormInput({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
   label: {
-    color: '#d8c0a0',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 8,
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
-    minHeight: 52,
-    borderRadius: 8,
-    backgroundColor: '#222329',
+    minHeight: 48,
+    borderRadius: radius.sm,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: '#3d3b38',
-    color: '#f8f4ed',
-    fontSize: 16,
-    paddingHorizontal: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 7 },
+    borderColor: colors.line,
+    color: colors.text,
+    fontSize: 15,
+    paddingHorizontal: spacing.md,
+  },
+  focusedInput: {
+    borderColor: colors.gold,
   },
   multiline: {
-    minHeight: 92,
-    paddingTop: 12,
+    minHeight: 88,
+    paddingTop: spacing.sm,
     textAlignVertical: 'top',
   },
 });

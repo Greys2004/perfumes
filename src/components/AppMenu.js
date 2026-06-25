@@ -1,12 +1,15 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import AnimatedPressable from './AnimatedPressable';
+import { colors, radius, spacing } from '../theme';
 
 const menuItems = [
-  { label: 'Inicio', routeName: 'Home', mark: '01' },
-  { label: 'Catalogo', routeName: 'PerfumesList', mark: '02' },
-  { label: 'Clientes', routeName: 'ClientsList', mark: '03' },
-  { label: 'Ventas', routeName: 'SaleForm', mark: '04' },
-  { label: 'Pagos', routeName: 'Payments', mark: '05' },
-  { label: 'Dashboard', routeName: 'Dashboard', mark: '06' },
+  { label: 'Inicio', routeName: 'Home', icon: 'home' },
+  { label: 'Catálogo', routeName: 'PerfumesList', icon: 'tag' },
+  { label: 'Clientes', routeName: 'ClientsList', icon: 'users' },
+  { label: 'Nueva Venta', routeName: 'SaleForm', icon: 'shopping-cart' },
+  { label: 'Pagos', routeName: 'Payments', icon: 'credit-card' },
+  { label: 'Dashboard', routeName: 'Dashboard', icon: 'pie-chart' },
 ];
 
 export default function AppMenu({ visible, onClose, onNavigate }) {
@@ -16,27 +19,35 @@ export default function AppMenu({ visible, onClose, onNavigate }) {
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.drawer}>
           <View style={styles.brandBlock}>
-            <Text style={styles.kicker}>Admin</Text>
-            <Text style={styles.title}>Perfumes</Text>
-            <Text style={styles.subtitle}>Inventario, clientes y ventas</Text>
+            <View style={styles.brandHeader}>
+              <Feather name="activity" size={20} color={colors.gold} />
+              <Text style={styles.kicker}>Admin Panel</Text>
+            </View>
+            <Text style={styles.title}>AromaOrigen</Text>
+            <Text style={styles.subtitle}>Gestión de Perfumes & Clientes</Text>
           </View>
 
           <View style={styles.group}>
             {menuItems.map((item) => (
-              <Pressable
+              <AnimatedPressable
                 key={item.routeName}
                 onPress={() => onNavigate(item.routeName)}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+                style={styles.menuItem}
               >
-                <Text style={styles.menuMark}>{item.mark}</Text>
+                <View style={styles.iconCircle}>
+                  <Feather name={item.icon} size={16} color={colors.ink} />
+                </View>
                 <Text style={styles.menuText}>{item.label}</Text>
-              </Pressable>
+                <Feather name="chevron-right" size={14} color={colors.textSubtle} style={styles.arrow} />
+              </AnimatedPressable>
             ))}
           </View>
 
           <View style={styles.footerNote}>
-            <Text style={styles.sectionLabel}>Inicio es la vista para cliente.</Text>
-            <Text style={styles.footerText}>Los datos internos viven en catalogo, pagos y dashboard.</Text>
+            <Text style={styles.sectionLabel}>Nota de navegación</Text>
+            <Text style={styles.footerText}>
+              "Inicio" es la vista pública del catálogo de perfumes. Las demás opciones son administrativas internas.
+            </Text>
           </View>
         </View>
       </View>
@@ -48,92 +59,101 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(5, 5, 8, 0.75)',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   drawer: {
-    width: 304,
-    backgroundColor: '#18191c',
+    width: 290,
+    backgroundColor: colors.background,
     borderRightWidth: 1,
-    borderColor: '#5d4a2d',
-    paddingTop: 58,
-    paddingHorizontal: 16,
+    borderColor: colors.line,
+    paddingTop: 54,
+    paddingHorizontal: spacing.md,
   },
   brandBlock: {
-    backgroundColor: '#24201c',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#4c3d2a',
-    padding: 16,
-    marginBottom: 18,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  brandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 30,
+    color: colors.text,
+    fontSize: 24,
     fontWeight: '900',
-    marginBottom: 5,
+    letterSpacing: -0.2,
+    marginBottom: 2,
   },
   subtitle: {
-    color: '#b9b0a4',
-    fontSize: 13,
+    color: colors.textSubtle,
+    fontSize: 12,
     fontWeight: '700',
   },
   group: {
-    gap: 8,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: spacing.xl,
   },
   menuItem: {
-    minHeight: 54,
-    borderRadius: 8,
-    backgroundColor: '#222329',
+    minHeight: 50,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: '#34353a',
+    borderColor: colors.line,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.sm,
   },
-  pressed: {
-    opacity: 0.82,
-  },
-  menuMark: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#d9ad69',
-    color: '#1d1710',
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    fontSize: 12,
-    fontWeight: '900',
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
   },
   menuText: {
-    color: '#f8f4ed',
-    fontSize: 16,
+    color: colors.text,
+    fontSize: 15,
     fontWeight: '800',
+    flex: 1,
+  },
+  arrow: {
+    opacity: 0.6,
   },
   footerNote: {
     borderTopWidth: 1,
-    borderTopColor: '#34353a',
-    paddingTop: 16,
+    borderTopColor: colors.line,
+    paddingTop: spacing.md,
+    marginTop: 'auto',
+    marginBottom: 24,
   },
   sectionLabel: {
-    color: '#b9b0a4',
-    fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   footerText: {
-    color: '#7f7a73',
+    color: colors.textSubtle,
     fontSize: 12,
     lineHeight: 18,
   },

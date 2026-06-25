@@ -11,6 +11,7 @@ import {
 
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
+import { colors, radius, spacing, shadow } from '../theme';
 import { createClient, updateClient } from '../services/clientsService';
 
 const initialForm = {
@@ -78,46 +79,48 @@ export default function ClientFormScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <Text style={styles.kicker}>{editingClient ? 'Editar cliente' : 'Nuevo cliente'}</Text>
-        <Text style={styles.title}>Datos de contacto</Text>
+        <Text style={styles.kicker}>{editingClient ? 'Edición de Perfil' : 'Registro de Cliente'}</Text>
+        <Text style={styles.title}>{editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}</Text>
         <Text style={styles.subtitle}>
-          Aqui solo guardamos informacion del cliente. La deuda se calcula con ventas y pagos.
+          Registra o actualiza la información básica del cliente. El saldo histórico y abonos se calculan de manera autónoma con las ventas y recibos.
         </Text>
 
         <View style={styles.formPanel}>
           <FormInput
-            label="Nombre"
+            label="Nombre Completo"
             value={form.nombre}
             onChangeText={(value) => updateField('nombre', value)}
-            placeholder="Ej. Ana Lopez"
+            placeholder="Ej. Ana López"
           />
           <FormInput
-            label="Telefono"
+            label="Teléfono Móvil"
             value={form.telefono}
             onChangeText={(value) => updateField('telefono', value)}
             placeholder="Ej. 5551234567"
             keyboardType="phone-pad"
           />
           <FormInput
-            label="Email"
+            label="Correo Electrónico"
             value={form.email}
             onChangeText={(value) => updateField('email', value)}
             placeholder="Ej. ana@email.com"
             keyboardType="email-address"
           />
           <FormInput
-            label="Notas"
+            label="Notas & Referencias"
             value={form.notas}
             onChangeText={(value) => updateField('notas', value)}
-            placeholder="Preferencias, entregas o detalles importantes"
+            placeholder="Dirección, fragancias favoritas o comentarios útiles..."
             multiline
           />
 
-          <PrimaryButton
-            title={saving ? 'Guardando...' : editingClient ? 'Actualizar cliente' : 'Guardar cliente'}
-            onPress={handleSave}
-            disabled={saving}
-          />
+          <View style={{ marginTop: spacing.md }}>
+            <PrimaryButton
+              title={saving ? 'Guardando...' : editingClient ? 'Actualizar Información' : 'Registrar Cliente'}
+              onPress={handleSave}
+              disabled={saving}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -127,35 +130,39 @@ export default function ClientFormScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#242527',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 18,
-    paddingBottom: 180,
+    padding: spacing.md,
+    paddingBottom: 80,
   },
   kicker: {
-    color: '#d8ad62',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   title: {
-    color: '#f8f4ed',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 8,
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    marginBottom: 6,
   },
   subtitle: {
-    color: '#c7c1b7',
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 18,
+    color: colors.textSubtle,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
   },
   formPanel: {
-    backgroundColor: '#303133',
-    borderRadius: 8,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#444446',
-    padding: 16,
+    borderColor: colors.line,
+    padding: spacing.md,
+    ...shadow.card,
   },
 });
