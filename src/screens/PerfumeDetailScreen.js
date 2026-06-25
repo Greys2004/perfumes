@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import AnimatedPressable from '../components/AnimatedPressable';
+import CalendarDatePicker from '../components/CalendarDatePicker';
 import { colors, radius, spacing, shadow } from '../theme';
 import {
   cleanupDuplicatePresentationPrices,
@@ -376,11 +377,10 @@ export default function PerfumeDetailScreen({ route }) {
             keyboardType="numeric"
           />
         )}
-        <FormInput
+        <CalendarDatePicker
           label="Fecha de Compra"
           value={purchaseForm.fecha_compra}
-          onChangeText={(value) => updatePurchaseField('fecha_compra', value)}
-          placeholder="AAAA-MM-DD"
+          onChange={(value) => updatePurchaseField('fecha_compra', value)}
         />
         <FormInput
           label="Proveedor"

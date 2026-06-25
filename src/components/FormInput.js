@@ -9,6 +9,7 @@ export default function FormInput({
   placeholder,
   multiline = false,
   keyboardType = 'default',
+  editable = true,
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -22,12 +23,14 @@ export default function FormInput({
         placeholderTextColor={colors.textSubtle}
         multiline={multiline}
         keyboardType={keyboardType}
+        editable={editable}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         style={[
           styles.input,
           multiline && styles.multiline,
-          isFocused && styles.focusedInput
+          isFocused && styles.focusedInput,
+          !editable && styles.disabledInput,
         ]}
       />
     </View>
@@ -58,6 +61,9 @@ const styles = StyleSheet.create({
   },
   focusedInput: {
     borderColor: colors.gold,
+  },
+  disabledInput: {
+    opacity: 0.65,
   },
   multiline: {
     minHeight: 88,

@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
+import CalendarDatePicker, { getLocalDateString } from '../components/CalendarDatePicker';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenActivePerfumes } from '../services/perfumesService';
 import { formatDateValue } from '../services/purchasesService';
@@ -22,7 +23,8 @@ export default function SaleDetailScreen({ navigation, route }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    fecha_venta: formatDateValue(sale.fecha_venta),
+    fecha_venta: formatDateValue(sale.fecha_venta) || getLocalDateString(),
+    fecha_pago_promesa: formatDateValue(sale.fecha_pago_promesa) || getLocalDateString(),
     total: String(sale.total || ''),
     notas: sale.notas || '',
   });
@@ -136,12 +138,18 @@ export default function SaleDetailScreen({ navigation, route }) {
       <View style={styles.panel}>
         {editing ? (
           <>
-            <FormInput
+            <CalendarDatePicker
               label="Fecha de venta"
               value={form.fecha_venta}
-              onChangeText={(value) => updateField('fecha_venta', value)}
-              placeholder="AAAA-MM-DD"
+              onChange={(value) => updateField('fecha_venta', value)}
             />
+            {(sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial') && (
+              <CalendarDatePicker
+                label="Fecha prometida de pago"
+                value={form.fecha_pago_promesa}
+                onChange={(value) => updateField('fecha_pago_promesa', value)}
+              />
+            )}
             <FormInput
               label="Total de venta"
               value={form.total}
@@ -177,6 +185,14 @@ export default function SaleDetailScreen({ navigation, route }) {
                 Registrado: {formatDateValue(sale.fecha_venta)}  ·  Estado: <Text style={{ color: sale.estado_pago === 'liquidado' ? colors.success : colors.gold, fontWeight: '700' }}>{sale.estado_pago?.toUpperCase()}</Text>
               </Text>
             </View>
+            {!!sale.fecha_pago_promesa && (sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial') && (
+              <View style={styles.metaRow}>
+                <Feather name="clock" size={12} color={colors.gold} />
+                <Text style={[styles.metaText, { color: colors.gold }]}>
+                  Pago prometido: {formatDateValue(sale.fecha_pago_promesa)}
+                </Text>
+              </View>
+            )}
           </>
         )}
       </View>

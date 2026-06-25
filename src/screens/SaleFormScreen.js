@@ -14,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import AnimatedPressable from '../components/AnimatedPressable';
+import CalendarDatePicker, { getLocalDateString } from '../components/CalendarDatePicker';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenClients } from '../services/clientsService';
 import { listenActivePerfumes } from '../services/perfumesService';
@@ -24,41 +25,9 @@ import {
 import { listenPurchasesByPerfume } from '../services/purchasesService';
 import { createSale } from '../services/salesService';
 
-function getLocalDateString(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(dateString, days) {
-  const [year, month, day] = dateString.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  date.setDate(date.getDate() + days);
-
-  return getLocalDateString(date);
-}
-
-function getWeekDays(dateString) {
-  const [year, month, day] = dateString.split('-').map(Number);
-  const selectedDate = new Date(year, month - 1, day);
-  const start = new Date(selectedDate);
-  const weekDay = start.getDay();
-  const daysFromMonday = weekDay === 0 ? 6 : weekDay - 1;
-  start.setDate(start.getDate() - daysFromMonday);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-
-    return getLocalDateString(date);
-  });
-}
-
-const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
 function getInitialForm() {
+  const today = getLocalDateString();
+
   return {
     cliente_id: '',
     perfume_id: '',
@@ -68,8 +37,10 @@ function getInitialForm() {
     cantidad: '1',
     precio_unitario: '',
     pago_inicial: '',
+    estado_pago_inicial: 'pendiente',
     metodo_pago: '',
-    fecha_venta: getLocalDateString(),
+    fecha_venta: today,
+    fecha_pago_promesa: today,
     notas: '',
   };
 }
@@ -100,6 +71,12 @@ function haveSameIds(firstIds, secondIds) {
   return firstIds.length === secondIds.length && firstIds.every((id, index) => id === secondIds[index]);
 }
 
+function getPresentationMl(type, selectedPerfume, quantity) {
+  const unitMl = type?.ml || selectedPerfume?.ml_botella_completa || 0;
+
+  return unitMl * quantity;
+}
+
 export default function SaleFormScreen({ navigation }) {
   const [clients, setClients] = useState([]);
   const [perfumes, setPerfumes] = useState([]);
@@ -108,6 +85,7 @@ export default function SaleFormScreen({ navigation }) {
   const [form, setForm] = useState(() => getInitialForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [inventoryLoaded, setInventoryLoaded] = useState(true);
 
   useEffect(() => {
     const unsubscribeClients = listenClients(setClients, (firebaseError) =>
@@ -127,9 +105,11 @@ export default function SaleFormScreen({ navigation }) {
     if (!form.perfume_id) {
       setPrices([]);
       setPurchases([]);
+      setInventoryLoaded(true);
       return undefined;
     }
 
+    setInventoryLoaded(false);
     const unsubscribePrices = listenPresentationPrices(
       form.perfume_id,
       setPrices,
@@ -137,8 +117,14 @@ export default function SaleFormScreen({ navigation }) {
     );
     const unsubscribePurchases = listenPurchasesByPerfume(
       form.perfume_id,
-      setPurchases,
-      (firebaseError) => setError(firebaseError.message)
+      (purchasesList) => {
+        setPurchases(purchasesList);
+        setInventoryLoaded(true);
+      },
+      (firebaseError) => {
+        setError(firebaseError.message);
+        setInventoryLoaded(true);
+      }
     );
 
     return () => {
@@ -162,9 +148,30 @@ export default function SaleFormScreen({ navigation }) {
       .filter((purchase) => form.compra_ids.includes(purchase.id))
       .reduce((sum, purchase) => sum + (Number(purchase.ml_restantes) || 0), 0);
   }, [availablePurchases, form.compra_ids]);
+  const totalAvailableStockMl = useMemo(() => {
+    return availablePurchases.reduce((sum, purchase) => sum + (Number(purchase.ml_restantes) || 0), 0);
+  }, [availablePurchases]);
+  const requestedMl = Number(form.ml_vendidos) || 0;
+  const stockValidationMessage = useMemo(() => {
+    if (!form.perfume_id || !inventoryLoaded || requestedMl <= 0) {
+      return '';
+    }
+
+    if (totalAvailableStockMl <= 0) {
+      return 'No hay inventario disponible para esta fragancia.';
+    }
+
+    if (requestedMl > totalAvailableStockMl) {
+      return `No puedes vender ${requestedMl} ml: solo hay ${totalAvailableStockMl} ml disponibles en inventario.`;
+    }
+
+    return '';
+  }, [form.perfume_id, inventoryLoaded, requestedMl, totalAvailableStockMl]);
   const total = useMemo(() => {
     return (Number(form.precio_unitario) || 0) * (Number(form.cantidad) || 1);
   }, [form.precio_unitario, form.cantidad]);
+  const shouldShowInitialPaymentInput = form.estado_pago_inicial === 'parcial';
+  const shouldShowPromiseDate = form.estado_pago_inicial !== 'completa';
 
   useEffect(() => {
     if (!form.perfume_id || availablePurchases.length === 0) {
@@ -184,6 +191,17 @@ export default function SaleFormScreen({ navigation }) {
       };
     });
   }, [availablePurchases, form.ml_vendidos, form.perfume_id]);
+
+  useEffect(() => {
+    if (form.estado_pago_inicial === 'completa') {
+      updateField('pago_inicial', total ? String(total) : '');
+      return;
+    }
+
+    if (form.estado_pago_inicial === 'pendiente') {
+      updateField('pago_inicial', '0');
+    }
+  }, [form.estado_pago_inicial, total]);
 
   function updateField(field, value) {
     setForm((currentForm) => ({
@@ -226,6 +244,21 @@ export default function SaleFormScreen({ navigation }) {
     }));
   }
 
+  function selectInitialPaymentStatus(status) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      estado_pago_inicial: status,
+      pago_inicial:
+        status === 'completa'
+          ? String(total)
+          : status === 'pendiente'
+            ? '0'
+            : currentForm.pago_inicial === '0'
+              ? ''
+              : currentForm.pago_inicial,
+    }));
+  }
+
   async function handleSave() {
     if (!form.cliente_id || !form.perfume_id || form.compra_ids.length === 0) {
       Alert.alert('Faltan datos', 'Selecciona cliente, perfume y al menos una compra de inventario.');
@@ -237,7 +270,12 @@ export default function SaleFormScreen({ navigation }) {
       return;
     }
 
-    if ((Number(form.ml_vendidos) || 0) > selectedStockMl) {
+    if (stockValidationMessage) {
+      Alert.alert('Stock insuficiente', stockValidationMessage);
+      return;
+    }
+
+    if (requestedMl > selectedStockMl) {
       Alert.alert(
         'Stock insuficiente',
         `Seleccionaste ${selectedStockMl} ml disponibles. Agrega otra compra de inventario para completar la venta.`
@@ -319,25 +357,38 @@ export default function SaleFormScreen({ navigation }) {
           
           <Text style={[styles.sectionHeading, { marginBottom: 8 }]}>Tipo de decant / botella</Text>
           <View style={styles.segmentRow}>
-            {presentationTypes.map((type) => (
-              <Pressable
-                key={type.value}
-                onPress={() => selectPresentation(type.value)}
-                style={[
-                  styles.segment,
-                  form.tipo_producto === type.value && styles.segmentActive,
-                ]}
-              >
-                <Text
+            {presentationTypes.map((type) => {
+              const quantity = Number(form.cantidad) || 1;
+              const presentationMl = getPresentationMl(type, selectedPerfume, quantity);
+              const isSelected = form.tipo_producto === type.value;
+              const isDisabled =
+                !!form.perfume_id &&
+                inventoryLoaded &&
+                presentationMl > totalAvailableStockMl;
+
+              return (
+                <Pressable
+                  key={type.value}
+                  onPress={() => selectPresentation(type.value)}
+                  disabled={isDisabled}
                   style={[
-                    styles.segmentText,
-                    form.tipo_producto === type.value && styles.segmentTextActive,
+                    styles.segment,
+                    isSelected && styles.segmentActive,
+                    isDisabled && styles.segmentDisabled,
                   ]}
                 >
-                  {type.label}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      isSelected && styles.segmentTextActive,
+                      isDisabled && styles.segmentTextDisabled,
+                    ]}
+                  >
+                    {type.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
           <Text style={styles.hint}>
             Sugerencia pública: {selectedPrice ? `$${selectedPrice.precio_publico}` : 'Sin precio configurado'}
@@ -357,6 +408,12 @@ export default function SaleFormScreen({ navigation }) {
             placeholder="Ej. 3"
             keyboardType="numeric"
           />
+          {!!stockValidationMessage && (
+            <View style={styles.inlineErrorBox}>
+              <Feather name="alert-triangle" size={14} color={colors.danger} style={{ marginRight: 6 }} />
+              <Text style={styles.inlineErrorText}>{stockValidationMessage}</Text>
+            </View>
+          )}
           <FormInput
             label="Precio Unitario"
             value={form.precio_unitario}
@@ -395,6 +452,11 @@ export default function SaleFormScreen({ navigation }) {
               <Text style={styles.selectedStockText}>Stock disponible seleccionado: {selectedStockMl} ml</Text>
             </View>
           )}
+          {!!form.perfume_id && inventoryLoaded && (
+            <Text style={[styles.selectedStockText, styles.totalStockText]}>
+              Stock total disponible: {totalAvailableStockMl} ml
+            </Text>
+          )}
         </View>
 
         <View style={styles.panel}>
@@ -402,12 +464,37 @@ export default function SaleFormScreen({ navigation }) {
             <Feather name="credit-card" size={16} color={colors.gold} />
             <Text style={styles.panelTitle}>Pago Inicial & Fecha</Text>
           </View>
+
+          <Text style={[styles.sectionHeading, { marginBottom: 8 }]}>Estado inicial de pago</Text>
+          <View style={styles.segmentRow}>
+            {[
+              { label: 'Completa', value: 'completa' },
+              { label: 'Parcial', value: 'parcial' },
+              { label: 'Pendiente', value: 'pendiente' },
+            ].map((status) => {
+              const isSelected = form.estado_pago_inicial === status.value;
+
+              return (
+                <Pressable
+                  key={status.value}
+                  onPress={() => selectInitialPaymentStatus(status.value)}
+                  style={[styles.segment, isSelected && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
+                    {status.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <FormInput
-            label="Pago Inicial (Opcional)"
+            label="Pago Inicial"
             value={form.pago_inicial}
             onChangeText={(value) => updateField('pago_inicial', value)}
             placeholder="Ej. 100"
             keyboardType="numeric"
+            editable={shouldShowInitialPaymentInput}
           />
           <FormInput
             label="Método de Pago inicial"
@@ -416,10 +503,18 @@ export default function SaleFormScreen({ navigation }) {
             placeholder="Efectivo, transferencia, tarjeta..."
           />
           
-          <DateSelector
+          <CalendarDatePicker
+            label="Fecha de venta"
             value={form.fecha_venta}
             onChange={(value) => updateField('fecha_venta', value)}
           />
+          {shouldShowPromiseDate && (
+            <CalendarDatePicker
+              label="Fecha prometida de pago"
+              value={form.fecha_pago_promesa}
+              onChange={(value) => updateField('fecha_pago_promesa', value)}
+            />
+          )}
           
           <FormInput
             label="Notas Internas"
@@ -433,7 +528,7 @@ export default function SaleFormScreen({ navigation }) {
             <PrimaryButton
               title={saving ? 'Guardando Venta...' : 'Registrar Venta'}
               onPress={handleSave}
-              disabled={saving}
+              disabled={saving || !!stockValidationMessage}
             />
           </View>
         </View>
@@ -632,6 +727,14 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
     ...shadow.glow,
   },
+  segmentDisabled: {
+    opacity: 0.45,
+    borderColor: colors.dangerLine,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
   segmentText: {
     color: colors.textSubtle,
     fontSize: 12,
@@ -639,6 +742,9 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: colors.ink,
+  },
+  segmentTextDisabled: {
+    color: colors.danger,
   },
   sectionHeading: {
     color: colors.textSubtle,
@@ -685,6 +791,28 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontSize: 12,
     fontWeight: '800',
+  },
+  totalStockText: {
+    color: colors.textSubtle,
+    marginTop: spacing.xs,
+  },
+  inlineErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  inlineErrorText: {
+    flex: 1,
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
   },
   dateBox: {
     backgroundColor: colors.surfaceRaised,

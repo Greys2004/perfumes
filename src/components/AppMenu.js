@@ -9,6 +9,7 @@ const menuItems = [
   { label: 'Clientes', routeName: 'ClientsList', icon: 'users' },
   { label: 'Nueva Venta', routeName: 'SaleForm', icon: 'shopping-cart' },
   { label: 'Pagos', routeName: 'Payments', icon: 'credit-card' },
+  { label: 'Calendario Pagos', routeName: 'ReceivablesCalendar', icon: 'calendar' },
   { label: 'Dashboard', routeName: 'Dashboard', icon: 'pie-chart' },
 ];
 

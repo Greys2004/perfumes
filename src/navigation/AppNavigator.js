@@ -14,6 +14,7 @@ import PaymentsScreen from '../screens/PaymentsScreen';
 import PerfumeDetailScreen from '../screens/PerfumeDetailScreen';
 import PerfumeFormScreen from '../screens/PerfumeFormScreen';
 import PerfumesListScreen from '../screens/PerfumesListScreen';
+import ReceivablesCalendarScreen from '../screens/ReceivablesCalendarScreen';
 import SaleDetailScreen from '../screens/SaleDetailScreen';
 import SaleFormScreen from '../screens/SaleFormScreen';
 
@@ -91,6 +92,11 @@ export default function AppNavigator() {
           options={{ title: 'Detalle venta' }}
         />
         <Stack.Screen name="Payments" component={PaymentsScreen} options={{ title: 'Pagos' }} />
+        <Stack.Screen
+          name="ReceivablesCalendar"
+          component={ReceivablesCalendarScreen}
+          options={{ title: 'Calendario de pagos' }}
+        />
         <Stack.Screen
           name="Dashboard"
           component={DashboardScreen}

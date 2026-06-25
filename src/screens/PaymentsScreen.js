@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import AnimatedPressable from '../components/AnimatedPressable';
+import CalendarDatePicker from '../components/CalendarDatePicker';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenAllPayments } from '../services/clientAccountService';
 import { listenClients } from '../services/clientsService';
@@ -324,11 +325,10 @@ export default function PaymentsScreen() {
                     onChangeText={(value) => updatePaymentField(sale.id, 'metodo_pago', value)}
                     placeholder="Efectivo, transferencia, tarjeta..."
                   />
-                  <FormInput
+                  <CalendarDatePicker
                     label="Fecha del abono"
                     value={paymentForm.fecha_pago}
-                    onChangeText={(value) => updatePaymentField(sale.id, 'fecha_pago', value)}
-                    placeholder="AAAA-MM-DD"
+                    onChange={(value) => updatePaymentField(sale.id, 'fecha_pago', value)}
                   />
                   <FormInput
                     label="Notas opcionales"

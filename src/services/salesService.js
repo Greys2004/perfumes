@@ -172,6 +172,7 @@ export async function createSale(saleData) {
     transaction.set(saleRef, {
       cliente_id: saleData.cliente_id,
       fecha_venta: saleData.fecha_venta,
+      fecha_pago_promesa: saleData.fecha_pago_promesa || '',
       total,
       estado_pago: getPaymentStatus(total, initialPayment),
       notas: saleData.notas.trim(),
@@ -268,6 +269,7 @@ export async function deletePayment(saleId, paymentId) {
 export async function updateSaleBasic(saleId, saleData) {
   await updateDoc(doc(db, 'ventas', saleId), {
     fecha_venta: saleData.fecha_venta,
+    fecha_pago_promesa: saleData.fecha_pago_promesa || '',
     total: Number(saleData.total) || 0,
     notas: saleData.notas.trim(),
   });
