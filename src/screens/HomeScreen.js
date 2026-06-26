@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -29,6 +31,7 @@ export default function HomeScreen() {
   const [showPrices, setShowPrices] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedImage, setExpandedImage] = useState(null);
 
   useEffect(() => {
     const unsubscribe = listenActivePerfumes(
@@ -118,9 +121,12 @@ export default function HomeScreen() {
           <View key={perfume.id} style={styles.perfumeCard}>
             <View style={styles.cardTop}>
               {perfume.imagen ? (
-                <View style={styles.imageContainer}>
+                <Pressable
+                  onPress={() => setExpandedImage(perfume)}
+                  style={styles.imageContainer}
+                >
                   <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
-                </View>
+                </Pressable>
               ) : (
                 <View style={styles.bottleMark}>
                   <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
@@ -172,6 +178,30 @@ export default function HomeScreen() {
             )}
           </View>
         ))}
+      <Modal
+        visible={!!expandedImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExpandedImage(null)}
+      >
+        <View style={styles.imageModalOverlay}>
+          <Pressable style={styles.imageModalBackdrop} onPress={() => setExpandedImage(null)} />
+          <View style={styles.imageModalContent}>
+            <View style={styles.imageModalHeader}>
+              <View>
+                <Text style={styles.imageModalTitle}>{expandedImage?.nombre}</Text>
+                <Text style={styles.imageModalSubtitle}>{expandedImage?.marca || 'Marca Exclusiva'}</Text>
+              </View>
+              <Pressable onPress={() => setExpandedImage(null)} style={styles.imageModalClose}>
+                <Feather name="x" size={18} color={colors.ink} />
+              </Pressable>
+            </View>
+            {!!expandedImage?.imagen && (
+              <Image source={{ uri: expandedImage.imagen }} style={styles.expandedImage} />
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -441,5 +471,55 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 13,
     fontWeight: '900',
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 5, 8, 0.82)',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  imageModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  imageModalContent: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    ...shadow.card,
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  imageModalTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  imageModalSubtitle: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  imageModalClose: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.glow,
+  },
+  expandedImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.sm,
+    backgroundColor: colors.background,
   },
 });

@@ -25,6 +25,7 @@ export default function SaleDetailScreen({ navigation, route }) {
   const [form, setForm] = useState({
     fecha_venta: formatDateValue(sale.fecha_venta) || getLocalDateString(),
     fecha_pago_promesa: formatDateValue(sale.fecha_pago_promesa) || getLocalDateString(),
+    fechas_pago_promesa: Array.isArray(sale.fechas_pago_promesa) ? sale.fechas_pago_promesa : [],
     total: String(sale.total || ''),
     notas: sale.notas || '',
   });

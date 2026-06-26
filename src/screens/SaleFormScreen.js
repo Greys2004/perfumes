@@ -41,6 +41,7 @@ function getInitialForm() {
     metodo_pago: '',
     fecha_venta: today,
     fecha_pago_promesa: today,
+    fechas_pago_promesa: [{ id: `${Date.now()}`, fecha: today, monto: '' }],
     notas: '',
   };
 }
@@ -172,6 +173,7 @@ export default function SaleFormScreen({ navigation }) {
   }, [form.precio_unitario, form.cantidad]);
   const shouldShowInitialPaymentInput = form.estado_pago_inicial === 'parcial';
   const shouldShowPromiseDate = form.estado_pago_inicial !== 'completa';
+  const remainingAfterInitialPayment = Math.max(total - (Number(form.pago_inicial) || 0), 0);
 
   useEffect(() => {
     if (!form.perfume_id || availablePurchases.length === 0) {
@@ -245,6 +247,8 @@ export default function SaleFormScreen({ navigation }) {
   }
 
   function selectInitialPaymentStatus(status) {
+    const pendingAmount = status === 'completa' ? 0 : Math.max(total - (status === 'pendiente' ? 0 : Number(form.pago_inicial) || 0), 0);
+
     setForm((currentForm) => ({
       ...currentForm,
       estado_pago_inicial: status,
@@ -256,7 +260,53 @@ export default function SaleFormScreen({ navigation }) {
             : currentForm.pago_inicial === '0'
               ? ''
               : currentForm.pago_inicial,
+      fechas_pago_promesa:
+        status === 'completa'
+          ? []
+          : currentForm.fechas_pago_promesa?.length
+            ? currentForm.fechas_pago_promesa
+            : [{ id: `${Date.now()}`, fecha: currentForm.fecha_pago_promesa || getLocalDateString(), monto: String(pendingAmount || '') }],
     }));
+  }
+
+  function updatePaymentPromise(promiseId, field, value) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      fechas_pago_promesa: currentForm.fechas_pago_promesa.map((paymentPromise) =>
+        paymentPromise.id === promiseId
+          ? { ...paymentPromise, [field]: value }
+          : paymentPromise
+      ),
+    }));
+  }
+
+  function addPaymentPromise() {
+    setForm((currentForm) => ({
+      ...currentForm,
+      fechas_pago_promesa: [
+        ...currentForm.fechas_pago_promesa,
+        {
+          id: `${Date.now()}`,
+          fecha: currentForm.fecha_pago_promesa || getLocalDateString(),
+          monto: '',
+        },
+      ],
+    }));
+  }
+
+  function removePaymentPromise(promiseId) {
+    setForm((currentForm) => {
+      const nextPromises = currentForm.fechas_pago_promesa.filter(
+        (paymentPromise) => paymentPromise.id !== promiseId
+      );
+
+      return {
+        ...currentForm,
+        fechas_pago_promesa: nextPromises.length
+          ? nextPromises
+          : [{ id: `${Date.now()}`, fecha: getLocalDateString(), monto: '' }],
+      };
+    });
   }
 
   async function handleSave() {
@@ -509,11 +559,50 @@ export default function SaleFormScreen({ navigation }) {
             onChange={(value) => updateField('fecha_venta', value)}
           />
           {shouldShowPromiseDate && (
-            <CalendarDatePicker
-              label="Fecha prometida de pago"
-              value={form.fecha_pago_promesa}
-              onChange={(value) => updateField('fecha_pago_promesa', value)}
-            />
+            <View style={styles.promiseSection}>
+              <View style={styles.promiseHeader}>
+                <View>
+                  <Text style={styles.sectionHeading}>Fechas prometidas de pago</Text>
+                  <Text style={styles.promiseHint}>Saldo por cobrar: ${remainingAfterInitialPayment}</Text>
+                </View>
+                <Pressable onPress={addPaymentPromise} style={styles.promiseAddButton}>
+                  <Feather name="plus" size={14} color={colors.ink} />
+                </Pressable>
+              </View>
+
+              {form.fechas_pago_promesa.map((paymentPromise, index) => (
+                <View key={paymentPromise.id} style={styles.promiseCard}>
+                  <View style={styles.promiseCardHeader}>
+                    <Text style={styles.promiseTitle}>Pago {index + 1}</Text>
+                    {form.fechas_pago_promesa.length > 1 && (
+                      <Pressable
+                        onPress={() => removePaymentPromise(paymentPromise.id)}
+                        style={styles.promiseRemoveButton}
+                      >
+                        <Feather name="x" size={13} color={colors.textMuted} />
+                      </Pressable>
+                    )}
+                  </View>
+                  <CalendarDatePicker
+                    label="Fecha prometida"
+                    value={paymentPromise.fecha}
+                    onChange={(value) => {
+                      updatePaymentPromise(paymentPromise.id, 'fecha', value);
+                      if (index === 0) {
+                        updateField('fecha_pago_promesa', value);
+                      }
+                    }}
+                  />
+                  <FormInput
+                    label="Monto esperado"
+                    value={paymentPromise.monto}
+                    onChangeText={(value) => updatePaymentPromise(paymentPromise.id, 'monto', value)}
+                    placeholder={index === 0 ? String(remainingAfterInitialPayment || '') : 'Ej. 200'}
+                    keyboardType="numeric"
+                  />
+                </View>
+              ))}
+            </View>
           )}
           
           <FormInput
@@ -813,6 +902,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 17,
+  },
+  promiseSection: {
+    marginBottom: spacing.md,
+  },
+  promiseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  promiseHint: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  promiseAddButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.glow,
+  },
+  promiseCard: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  promiseCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  promiseTitle: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  promiseRemoveButton: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm - 4,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateBox: {
     backgroundColor: colors.surfaceRaised,

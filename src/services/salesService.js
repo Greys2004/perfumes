@@ -57,6 +57,20 @@ function getPaymentStatus(total, initialPayment) {
   return 'pendiente';
 }
 
+function normalizePaymentPromises(saleData) {
+  const promises = Array.isArray(saleData.fechas_pago_promesa)
+    ? saleData.fechas_pago_promesa
+    : [];
+
+  return promises
+    .map((paymentPromise) => ({
+      id: paymentPromise.id || `${Date.now()}`,
+      fecha: paymentPromise.fecha || saleData.fecha_pago_promesa || '',
+      monto: Number(paymentPromise.monto) || 0,
+    }))
+    .filter((paymentPromise) => paymentPromise.fecha);
+}
+
 async function updateSalePaymentStatus(saleId) {
   const saleRef = doc(db, 'ventas', saleId);
   const saleSnapshot = await getDoc(saleRef);
@@ -136,6 +150,8 @@ export async function createSale(saleData) {
     ? saleData.compra_ids
     : [saleData.compra_id].filter(Boolean);
   const purchaseRefs = purchaseIds.map((purchaseId) => doc(db, 'compras', purchaseId));
+  const paymentPromises = normalizePaymentPromises(saleData);
+  const firstPromiseDate = paymentPromises[0]?.fecha || saleData.fecha_pago_promesa || '';
 
   return runTransaction(db, async (transaction) => {
     const stockSources = [];
@@ -172,7 +188,8 @@ export async function createSale(saleData) {
     transaction.set(saleRef, {
       cliente_id: saleData.cliente_id,
       fecha_venta: saleData.fecha_venta,
-      fecha_pago_promesa: saleData.fecha_pago_promesa || '',
+      fecha_pago_promesa: firstPromiseDate,
+      fechas_pago_promesa: paymentPromises,
       total,
       estado_pago: getPaymentStatus(total, initialPayment),
       notas: saleData.notas.trim(),
@@ -249,6 +266,34 @@ export async function addPaymentToSale(saleId, paymentData) {
   return updateSalePaymentStatus(saleId);
 }
 
+export async function registerSaleCollectionOutcome(saleId, outcomeData) {
+  const saleRef = doc(db, 'ventas', saleId);
+  const saleSnapshot = await getDoc(saleRef);
+
+  if (!saleSnapshot.exists()) {
+    throw new Error('No se encontro la venta para registrar la cobranza.');
+  }
+
+  const currentHistory = Array.isArray(saleSnapshot.data().historial_cobranza)
+    ? saleSnapshot.data().historial_cobranza
+    : [];
+
+  return updateDoc(saleRef, {
+    historial_cobranza: [
+      ...currentHistory,
+      {
+        id: `${Date.now()}`,
+        fecha: outcomeData.fecha,
+        estado: outcomeData.estado,
+        monto: Number(outcomeData.monto) || 0,
+        notas: outcomeData.notas?.trim() || '',
+        created_at: getLocalDateString(),
+      },
+    ],
+    updated_at: serverTimestamp(),
+  });
+}
+
 export async function updatePayment(saleId, paymentId, paymentData) {
   await updateDoc(doc(db, 'pagos', paymentId), {
     monto: Number(paymentData.monto) || 0,
@@ -267,14 +312,30 @@ export async function deletePayment(saleId, paymentId) {
 }
 
 export async function updateSaleBasic(saleId, saleData) {
+  const paymentPromises = normalizePaymentPromises(saleData);
+  const firstPromiseDate = paymentPromises[0]?.fecha || saleData.fecha_pago_promesa || '';
+
   await updateDoc(doc(db, 'ventas', saleId), {
     fecha_venta: saleData.fecha_venta,
-    fecha_pago_promesa: saleData.fecha_pago_promesa || '',
+    fecha_pago_promesa: firstPromiseDate,
+    fechas_pago_promesa: paymentPromises,
     total: Number(saleData.total) || 0,
     notas: saleData.notas.trim(),
   });
 
   return updateSalePaymentStatus(saleId);
+}
+
+export async function updateSalePaymentPromises(saleId, paymentPromises) {
+  const normalizedPromises = normalizePaymentPromises({
+    fechas_pago_promesa: paymentPromises,
+  });
+
+  return updateDoc(doc(db, 'ventas', saleId), {
+    fecha_pago_promesa: normalizedPromises[0]?.fecha || '',
+    fechas_pago_promesa: normalizedPromises,
+    updated_at: serverTimestamp(),
+  });
 }
 
 export async function cancelSale(saleId) {

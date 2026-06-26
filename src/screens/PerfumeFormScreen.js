@@ -4,6 +4,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +16,8 @@ import { Feather } from '@expo/vector-icons';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import { colors, radius, spacing, shadow } from '../theme';
-import { createPerfume, updatePerfume, uploadPerfumeImage } from '../services/perfumesService';
+import { createPerfume, updatePerfume } from '../services/perfumesService';
+import { subirImagenACloudinary } from '../services/imageService';
 
 const initialForm = {
   nombre: '',
@@ -53,7 +55,8 @@ export default function PerfumeFormScreen({ navigation, route }) {
   const editingPerfume = route.params?.perfume;
   const [form, setForm] = useState(getInitialForm(editingPerfume));
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagenLocal, setImagenLocal] = useState('');
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
 
   function updateField(field, value) {
     setForm((currentForm) => ({
@@ -73,23 +76,15 @@ export default function PerfumeFormScreen({ navigation, route }) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 5],
-      quality: 0.75,
+      aspect: [1, 1],
+      quality: 0.7,
     });
 
     if (result.canceled) {
       return;
     }
 
-    try {
-      setUploadingImage(true);
-      const imageUrl = await uploadPerfumeImage(result.assets[0].uri);
-      updateField('imagen', imageUrl);
-    } catch (error) {
-      Alert.alert('No se pudo subir la imagen', error.message);
-    } finally {
-      setUploadingImage(false);
-    }
+    setImagenLocal(result.assets[0].uri);
   }
 
   async function handleSave() {
@@ -100,19 +95,33 @@ export default function PerfumeFormScreen({ navigation, route }) {
 
     try {
       setSaving(true);
+      setSubiendoImagen(!!imagenLocal);
+      const imageUrl = imagenLocal
+        ? await subirImagenACloudinary(imagenLocal)
+        : form.imagen.trim();
+      const perfumePayload = {
+        ...form,
+        imagen: imageUrl,
+      };
+
       if (editingPerfume) {
-        await updatePerfume(editingPerfume.id, form);
+        await updatePerfume(editingPerfume.id, perfumePayload);
       } else {
-        await createPerfume(form);
+        await createPerfume(perfumePayload);
       }
       setForm(initialForm);
+      setImagenLocal('');
       navigation.goBack();
     } catch (error) {
       Alert.alert('No se pudo guardar', error.message);
     } finally {
       setSaving(false);
+      setSubiendoImagen(false);
     }
   }
+
+  const previewUri = imagenLocal || form.imagen;
+  const disableActions = saving || subiendoImagen;
 
   return (
     <KeyboardAvoidingView
@@ -132,15 +141,27 @@ export default function PerfumeFormScreen({ navigation, route }) {
         </Text>
 
         <View style={styles.formPanel}>
-          {!!form.imagen && (
-            <View style={styles.imageWrapper}>
-              <Image source={{ uri: form.imagen }} style={styles.previewImage} />
-            </View>
-          )}
-          <PrimaryButton
-            title={uploadingImage ? 'Subiendo Imagen...' : 'Elegir Imagen de Galería'}
+          <Pressable
             onPress={handlePickImage}
-            disabled={uploadingImage}
+            disabled={disableActions}
+            style={styles.imagePicker}
+          >
+            {previewUri ? (
+              <Image source={{ uri: previewUri }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <View style={styles.placeholderIcon}>
+                  <Feather name="image" size={22} color={colors.ink} />
+                </View>
+                <Text style={styles.placeholderTitle}>Seleccionar imagen</Text>
+                <Text style={styles.placeholderText}>Galeria del telefono</Text>
+              </View>
+            )}
+          </Pressable>
+          <PrimaryButton
+            title={imagenLocal ? 'Cambiar Imagen Seleccionada' : 'Elegir Imagen de Galeria'}
+            onPress={handlePickImage}
+            disabled={disableActions}
             variant="secondary"
           />
           <View style={styles.imageSpace} />
@@ -225,9 +246,17 @@ export default function PerfumeFormScreen({ navigation, route }) {
 
           <View style={{ marginTop: spacing.md }}>
             <PrimaryButton
-              title={saving ? 'Guardando...' : editingPerfume ? 'Actualizar Información' : 'Registrar Perfume'}
+              title={
+                subiendoImagen
+                  ? 'Subiendo imagen...'
+                  : saving
+                    ? 'Guardando...'
+                    : editingPerfume
+                      ? 'Actualizar Informacion'
+                      : 'Registrar Perfume'
+              }
               onPress={handleSave}
-              disabled={saving}
+              disabled={disableActions}
             />
           </View>
         </View>
@@ -274,12 +303,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadow.card,
   },
-  imageWrapper: {
+  imagePicker: {
     borderWidth: 1,
     borderColor: colors.lineStrong,
     borderRadius: radius.md,
     padding: 3,
     marginBottom: spacing.md,
+    minHeight: 220,
+    backgroundColor: colors.surfaceRaised,
     ...shadow.glow,
   },
   previewImage: {
@@ -287,6 +318,37 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: radius.md - 3,
     backgroundColor: colors.backgroundSoft,
+  },
+  imagePlaceholder: {
+    minHeight: 220,
+    borderRadius: radius.md - 3,
+    backgroundColor: colors.backgroundSoft,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  placeholderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    ...shadow.glow,
+  },
+  placeholderTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  placeholderText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '700',
   },
   imageSpace: {
     height: 12,

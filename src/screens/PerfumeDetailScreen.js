@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -235,9 +236,15 @@ export default function PerfumeDetailScreen({ route }) {
       keyboardDismissMode="on-drag"
     >
       <View style={styles.hero}>
-        <View style={styles.bottleMark}>
-          <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
-        </View>
+        {perfume.imagen ? (
+          <View style={styles.heroImageFrame}>
+            <Image source={{ uri: perfume.imagen }} style={styles.heroImage} />
+          </View>
+        ) : (
+          <View style={styles.bottleMark}>
+            <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
+          </View>
+        )}
         <View style={styles.heroInfo}>
           <Text style={styles.kicker}>{perfume.marca || 'Marca Exclusiva'}</Text>
           <Text style={styles.title}>{perfume.nombre}</Text>
@@ -571,6 +578,22 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 26,
     fontWeight: '900',
+  },
+  heroImageFrame: {
+    width: 72,
+    height: 86,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: 2,
+    backgroundColor: colors.surfaceRaised,
+    ...shadow.glow,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.background,
   },
   heroInfo: {
     flex: 1,

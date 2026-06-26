@@ -8,9 +8,8 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-import { db, storage } from '../config/firebase';
+import { db } from '../config/firebase';
 
 const perfumesCollection = collection(db, 'perfumes');
 
@@ -104,16 +103,4 @@ export async function restorePerfume(perfumeId) {
     activo: true,
     updated_at: serverTimestamp(),
   });
-}
-
-export async function uploadPerfumeImage(uri) {
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  const imageRef = ref(storage, `perfumes/perfume-${Date.now()}.jpg`);
-
-  await uploadBytes(imageRef, blob, {
-    contentType: blob.type || 'image/jpeg',
-  });
-
-  return getDownloadURL(imageRef);
 }

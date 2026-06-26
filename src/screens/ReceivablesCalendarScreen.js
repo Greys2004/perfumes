@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { colors, radius, spacing, shadow } from '../theme';
-import { listenClients } from '../services/clientsService';
-import { listenAllPayments } from '../services/clientAccountService';
-import { listenAllSales } from '../services/salesService';
-import {
+import CalendarDatePicker, {
   addMonths,
   getLocalDateString,
   parseDateString,
 } from '../components/CalendarDatePicker';
+import FormInput from '../components/FormInput';
+import PrimaryButton from '../components/PrimaryButton';
+import { colors, radius, spacing, shadow } from '../theme';
+import { listenClients } from '../services/clientsService';
+import { listenAllPayments } from '../services/clientAccountService';
+import { listenActivePerfumes } from '../services/perfumesService';
 import { formatDateValue } from '../services/purchasesService';
+import {
+  addPaymentToSale,
+  listenAllSaleDetails,
+  listenAllSales,
+  registerSaleCollectionOutcome,
+  updateSalePaymentPromises,
+} from '../services/salesService';
 
 const monthNames = [
   'Enero',
@@ -50,11 +59,50 @@ function getMonthGrid(dateString) {
   });
 }
 
+function getStatusColor(status) {
+  return status === 'pendiente' ? colors.danger : colors.gold;
+}
+
+function normalizeSalePromises(sale, remaining) {
+  const promises = Array.isArray(sale.fechas_pago_promesa)
+    ? sale.fechas_pago_promesa
+    : [];
+
+  if (promises.length > 0) {
+    return promises
+      .map((paymentPromise, index) => ({
+        id: paymentPromise.id || `${sale.id}-${index}`,
+        fecha: formatDateValue(paymentPromise.fecha) || formatDateValue(sale.fecha_pago_promesa),
+        monto: Number(paymentPromise.monto) || remaining,
+      }))
+      .filter((paymentPromise) => paymentPromise.fecha);
+  }
+
+  const legacyDate = formatDateValue(sale.fecha_pago_promesa) || formatDateValue(sale.fecha_venta);
+
+  return legacyDate
+    ? [{ id: `${sale.id}-legacy`, fecha: legacyDate, monto: remaining }]
+    : [];
+}
+
 export default function ReceivablesCalendarScreen() {
   const [sales, setSales] = useState([]);
   const [payments, setPayments] = useState([]);
   const [clients, setClients] = useState([]);
+  const [saleDetails, setSaleDetails] = useState([]);
+  const [perfumes, setPerfumes] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const [editingSaleId, setEditingSaleId] = useState('');
+  const [editingReceivable, setEditingReceivable] = useState(null);
+  const [promiseForm, setPromiseForm] = useState([]);
+  const [outcomeReceivable, setOutcomeReceivable] = useState(null);
+  const [outcomeForm, setOutcomeForm] = useState({
+    estado: 'pago',
+    monto: '',
+    metodo_pago: '',
+    notas: '',
+  });
+  const [savingSaleId, setSavingSaleId] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -70,38 +118,55 @@ export default function ReceivablesCalendarScreen() {
       setClients,
       (firebaseError) => setError(firebaseError.message)
     );
+    const unsubscribeDetails = listenAllSaleDetails(
+      setSaleDetails,
+      (firebaseError) => setError(firebaseError.message)
+    );
+    const unsubscribePerfumes = listenActivePerfumes(
+      setPerfumes,
+      (firebaseError) => setError(firebaseError.message)
+    );
 
     return () => {
       unsubscribeSales();
       unsubscribePayments();
       unsubscribeClients();
+      unsubscribeDetails();
+      unsubscribePerfumes();
     };
   }, []);
 
   const receivables = useMemo(() => {
     return sales
       .filter((sale) => sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial')
-      .map((sale) => {
+      .flatMap((sale) => {
         const salePayments = payments.filter((payment) => payment.venta_id === sale.id);
         const paid = salePayments.reduce((sum, payment) => sum + (Number(payment.monto) || 0), 0);
         const total = Number(sale.total) || 0;
+        const remaining = Math.max(total - paid, 0);
+        const promises = normalizeSalePromises(sale, remaining);
 
-        return {
-          ...sale,
+        if (remaining <= 0) {
+          return [];
+        }
+
+        return promises.map((paymentPromise) => ({
+          ...paymentPromise,
+          sale,
           paid,
-          remaining: total - paid,
-          dueDate: formatDateValue(sale.fecha_pago_promesa) || formatDateValue(sale.fecha_venta) || getLocalDateString(),
-        };
-      })
-      .filter((sale) => sale.remaining > 0);
+          total,
+          remaining,
+          expectedAmount: Number(paymentPromise.monto) || remaining,
+        }));
+      });
   }, [payments, sales]);
 
   const receivablesByDate = useMemo(() => {
-    return receivables.reduce((summary, sale) => {
-      const items = summary[sale.dueDate] || [];
+    return receivables.reduce((summary, receivable) => {
+      const items = summary[receivable.fecha] || [];
       return {
         ...summary,
-        [sale.dueDate]: [...items, sale],
+        [receivable.fecha]: [...items, receivable],
       };
     }, {});
   }, [receivables]);
@@ -116,12 +181,163 @@ export default function ReceivablesCalendarScreen() {
     return client?.nombre || 'Cliente no encontrado';
   }
 
+  function getSaleProducts(saleId) {
+    const details = saleDetails.filter((detail) => detail.venta_id === saleId);
+    const summary = details.reduce((items, detail) => {
+      const perfume = perfumes.find((perfumeItem) => perfumeItem.id === detail.perfume_id);
+      const key = detail.perfume_id || detail.id;
+      const current = items[key] || {
+        nombre: perfume?.nombre || 'Perfume no encontrado',
+        ml: 0,
+      };
+
+      return {
+        ...items,
+        [key]: {
+          ...current,
+          ml: current.ml + (Number(detail.ml_vendidos) || 0),
+        },
+      };
+    }, {});
+
+    const products = Object.values(summary);
+    return products.length
+      ? products.map((product) => `${product.nombre} · ${product.ml} ml`).join(' / ')
+      : 'Sin perfume registrado';
+  }
+
+  function getLatestOutcomeForDate(sale, date) {
+    const history = Array.isArray(sale.historial_cobranza) ? sale.historial_cobranza : [];
+    const outcomes = history.filter((item) => item.fecha === date);
+
+    return outcomes[outcomes.length - 1];
+  }
+
+  function startEditingSale(receivable) {
+    const sale = receivable.sale;
+    const salePayments = payments.filter((payment) => payment.venta_id === sale.id);
+    const paid = salePayments.reduce((sum, payment) => sum + (Number(payment.monto) || 0), 0);
+    const remaining = Math.max((Number(sale.total) || 0) - paid, 0);
+
+    setEditingReceivable(receivable);
+    setEditingSaleId(sale.id);
+    setPromiseForm(
+      normalizeSalePromises(sale, remaining).map((paymentPromise) => ({
+        id: paymentPromise.id,
+        fecha: paymentPromise.fecha,
+        monto: String(paymentPromise.monto || ''),
+      }))
+    );
+  }
+
+  function startOutcome(receivable) {
+    setOutcomeReceivable(receivable);
+    setOutcomeForm({
+      estado: 'pago',
+      monto: String(Math.min(receivable.expectedAmount, receivable.remaining) || ''),
+      metodo_pago: '',
+      notas: '',
+    });
+  }
+
+  function updateOutcomeField(field, value) {
+    setOutcomeForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  function updatePromiseForm(promiseId, field, value) {
+    setPromiseForm((currentForm) =>
+      currentForm.map((paymentPromise) =>
+        paymentPromise.id === promiseId
+          ? { ...paymentPromise, [field]: value }
+          : paymentPromise
+      )
+    );
+  }
+
+  function addPromiseDate() {
+    setPromiseForm((currentForm) => [
+      ...currentForm,
+      { id: `${Date.now()}`, fecha: selectedDate, monto: '' },
+    ]);
+  }
+
+  function removePromiseDate(promiseId) {
+    setPromiseForm((currentForm) => currentForm.filter((paymentPromise) => paymentPromise.id !== promiseId));
+  }
+
+  async function savePromiseDates() {
+    if (!editingSaleId) {
+      return;
+    }
+
+    if (promiseForm.length === 0) {
+      Alert.alert('Falta una fecha', 'Agrega al menos una fecha prometida de pago.');
+      return;
+    }
+
+    try {
+      setSavingSaleId(editingSaleId);
+      await updateSalePaymentPromises(editingSaleId, promiseForm);
+      setEditingSaleId('');
+      setEditingReceivable(null);
+      setPromiseForm([]);
+    } catch (firebaseError) {
+      Alert.alert('No se pudieron guardar las fechas', firebaseError.message);
+    } finally {
+      setSavingSaleId('');
+    }
+  }
+
+  async function saveCollectionOutcome(receivable) {
+    const paid = outcomeForm.estado === 'pago';
+
+    if (paid && !outcomeForm.monto.trim()) {
+      Alert.alert('Falta el monto', 'Escribe cuanto pago el cliente.');
+      return;
+    }
+
+    try {
+      setSavingSaleId(receivable.sale.id);
+
+      if (paid) {
+        await addPaymentToSale(receivable.sale.id, {
+          monto: outcomeForm.monto,
+          metodo_pago: outcomeForm.metodo_pago,
+          fecha_pago: selectedDate,
+          notas: outcomeForm.notas || 'Pago registrado desde calendario',
+        });
+      }
+
+      await registerSaleCollectionOutcome(receivable.sale.id, {
+        fecha: selectedDate,
+        estado: paid ? 'pago' : 'no_pago',
+        monto: paid ? outcomeForm.monto : 0,
+        notas: outcomeForm.notas,
+      });
+
+      setOutcomeReceivable(null);
+      setOutcomeForm({
+        estado: 'pago',
+        monto: '',
+        metodo_pago: '',
+        notas: '',
+      });
+    } catch (firebaseError) {
+      Alert.alert('No se pudo registrar la cobranza', firebaseError.message);
+    } finally {
+      setSavingSaleId('');
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.kicker}>Cobranza</Text>
       <Text style={styles.title}>Calendario de Pagos</Text>
       <Text style={styles.subtitle}>
-        Ventas pendientes y parciales organizadas por fecha prometida de pago.
+        Puntos rojos indican ventas pendientes; puntos dorados indican pagos parciales.
       </Text>
 
       {!!error && (
@@ -153,6 +369,8 @@ export default function ReceivablesCalendarScreen() {
           {monthDays.map((day) => {
             const dayItems = receivablesByDate[day.value] || [];
             const isSelected = day.value === selectedDate;
+            const hasPending = dayItems.some((item) => item.sale.estado_pago === 'pendiente');
+            const dotColor = hasPending ? colors.danger : colors.gold;
 
             return (
               <Pressable
@@ -168,8 +386,13 @@ export default function ReceivablesCalendarScreen() {
                   {day.day}
                 </Text>
                 {dayItems.length > 0 && (
-                  <View style={[styles.dueDot, isSelected && styles.dueDotActive]}>
-                    <Text style={[styles.dueDotText, isSelected && styles.dueDotTextActive]}>
+                  <View
+                    style={[
+                      styles.dueDot,
+                      { backgroundColor: isSelected ? colors.ink : dotColor },
+                    ]}
+                  >
+                    <Text style={[styles.dueDotText, isSelected && { color: dotColor }]}>
                       {dayItems.length}
                     </Text>
                   </View>
@@ -189,25 +412,241 @@ export default function ReceivablesCalendarScreen() {
         {selectedItems.length === 0 ? (
           <Text style={styles.emptyText}>No hay pagos prometidos para este dia.</Text>
         ) : (
-          selectedItems.map((sale) => (
-            <View key={sale.id} style={styles.saleCard}>
-              <View style={styles.saleTop}>
-                <View style={styles.saleInfo}>
-                  <Text style={styles.saleClient}>{getClientName(sale.cliente_id)}</Text>
-                  <Text style={styles.saleMeta}>
-                    Venta: {formatDateValue(sale.fecha_venta)}  ·  {sale.estado_pago?.toUpperCase()}
-                  </Text>
+          selectedItems.map((receivable) => {
+            const statusColor = getStatusColor(receivable.sale.estado_pago);
+            const latestOutcome = getLatestOutcomeForDate(receivable.sale, selectedDate);
+
+            return (
+              <View key={`${receivable.sale.id}-${receivable.id}`} style={styles.saleCard}>
+                <View style={styles.saleTop}>
+                  <View style={styles.saleInfo}>
+                    <View style={styles.saleNameRow}>
+                      <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                      <Text style={styles.saleClient}>{getClientName(receivable.sale.cliente_id)}</Text>
+                    </View>
+                    <Text style={styles.saleMeta}>
+                      {getSaleProducts(receivable.sale.id)}
+                    </Text>
+                    <Text style={styles.saleMeta}>
+                      Venta: {formatDateValue(receivable.sale.fecha_venta)} · {receivable.sale.estado_pago?.toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.amountBlock}>
+                    <Text style={[styles.remainingText, { color: statusColor }]}>
+                      ${receivable.expectedAmount}
+                    </Text>
+                    <Text style={styles.amountCaption}>programado</Text>
+                  </View>
                 </View>
-                <Text style={styles.remainingText}>${sale.remaining}</Text>
+                <View style={styles.saleNumbers}>
+                  <Text style={styles.saleNumberText}>Total ${receivable.total}</Text>
+                  <Text style={styles.saleNumberText}>Pagado ${receivable.paid}</Text>
+                  <Text style={styles.saleNumberText}>Falta ${receivable.remaining}</Text>
+                </View>
+                {!!latestOutcome && (
+                  <View style={styles.outcomeSummary}>
+                    <Feather
+                      name={latestOutcome.estado === 'pago' ? 'check-circle' : 'slash'}
+                      size={13}
+                      color={latestOutcome.estado === 'pago' ? colors.success : colors.danger}
+                    />
+                    <Text style={styles.outcomeSummaryText}>
+                      {latestOutcome.estado === 'pago'
+                        ? `Pago registrado: $${latestOutcome.monto || 0}`
+                        : 'Marcado como no pago'}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.cardActions}>
+                  <Pressable
+                    onPress={() => startOutcome(receivable)}
+                    style={[styles.resultButton, { borderColor: statusColor }]}
+                  >
+                    <Feather name="check-circle" size={13} color={colors.ink} />
+                    <Text style={styles.resultButtonText}>Resultado</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => startEditingSale(receivable)}
+                    style={styles.editButton}
+                  >
+                    <Feather name="edit-2" size={12} color={colors.gold} />
+                    <Text style={styles.editButtonText}>Fecha/monto</Text>
+                  </Pressable>
+                </View>
               </View>
-              <View style={styles.saleNumbers}>
-                <Text style={styles.saleNumberText}>Total ${sale.total || 0}</Text>
-                <Text style={styles.saleNumberText}>Pagado ${sale.paid}</Text>
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
+
+      <Modal
+        visible={!!outcomeReceivable}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setOutcomeReceivable(null)}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable style={styles.sheetBackdrop} onPress={() => setOutcomeReceivable(null)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={styles.sheetKicker}>Cobranza del {selectedDate}</Text>
+                <Text style={styles.sheetTitle}>
+                  {outcomeReceivable ? getClientName(outcomeReceivable.sale.cliente_id) : ''}
+                </Text>
+              </View>
+              <Pressable onPress={() => setOutcomeReceivable(null)} style={styles.sheetCloseButton}>
+                <Feather name="x" size={16} color={colors.ink} />
+              </Pressable>
+            </View>
+
+            {!!outcomeReceivable && (
+              <>
+                <Text style={styles.sheetMeta}>{getSaleProducts(outcomeReceivable.sale.id)}</Text>
+                <View style={styles.outcomeSegmentRow}>
+                  {[
+                    { label: 'Pago recibido', value: 'pago' },
+                    { label: 'No pago', value: 'no_pago' },
+                  ].map((option) => {
+                    const selected = outcomeForm.estado === option.value;
+
+                    return (
+                      <Pressable
+                        key={option.value}
+                        onPress={() => updateOutcomeField('estado', option.value)}
+                        style={[styles.outcomeSegment, selected && styles.outcomeSegmentActive]}
+                      >
+                        <Text style={[styles.outcomeSegmentText, selected && styles.outcomeSegmentTextActive]}>
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {outcomeForm.estado === 'pago' && (
+                  <>
+                    <FormInput
+                      label="Cantidad pagada"
+                      value={outcomeForm.monto}
+                      onChangeText={(value) => updateOutcomeField('monto', value)}
+                      placeholder="Ej. 500"
+                      keyboardType="numeric"
+                    />
+                    <FormInput
+                      label="Metodo de pago"
+                      value={outcomeForm.metodo_pago}
+                      onChangeText={(value) => updateOutcomeField('metodo_pago', value)}
+                      placeholder="Efectivo, transferencia..."
+                    />
+                  </>
+                )}
+
+                <FormInput
+                  label={outcomeForm.estado === 'pago' ? 'Notas' : 'Motivo / seguimiento'}
+                  value={outcomeForm.notas}
+                  onChangeText={(value) => updateOutcomeField('notas', value)}
+                  placeholder={outcomeForm.estado === 'pago' ? 'Comentario opcional' : 'Ej. Reprogramar, no contesto...'}
+                />
+
+                <PrimaryButton
+                  title={savingSaleId === outcomeReceivable.sale.id ? 'Guardando...' : 'Guardar resultado'}
+                  onPress={() => saveCollectionOutcome(outcomeReceivable)}
+                  disabled={savingSaleId === outcomeReceivable.sale.id}
+                />
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!editingReceivable}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setEditingReceivable(null);
+          setEditingSaleId('');
+        }}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable
+            style={styles.sheetBackdrop}
+            onPress={() => {
+              setEditingReceivable(null);
+              setEditingSaleId('');
+            }}
+          />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={styles.sheetKicker}>Editar fecha y monto</Text>
+                <Text style={styles.sheetTitle}>
+                  {editingReceivable ? getClientName(editingReceivable.sale.cliente_id) : ''}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setEditingReceivable(null);
+                  setEditingSaleId('');
+                }}
+                style={styles.sheetCloseButton}
+              >
+                <Feather name="x" size={16} color={colors.ink} />
+              </Pressable>
+            </View>
+
+            {!!editingReceivable && (
+              <>
+                <Text style={styles.sheetMeta}>{getSaleProducts(editingReceivable.sale.id)}</Text>
+                <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                  {promiseForm.map((paymentPromise, index) => (
+                    <View key={paymentPromise.id} style={styles.promiseEditor}>
+                      <View style={styles.promiseEditorHeader}>
+                        <Text style={styles.promiseEditorTitle}>Promesa {index + 1}</Text>
+                        {promiseForm.length > 1 && (
+                          <Pressable
+                            onPress={() => removePromiseDate(paymentPromise.id)}
+                            style={styles.removeButton}
+                          >
+                            <Feather name="x" size={12} color={colors.textMuted} />
+                          </Pressable>
+                        )}
+                      </View>
+                      <CalendarDatePicker
+                        label="Selecciona fecha"
+                        value={paymentPromise.fecha}
+                        onChange={(value) => updatePromiseForm(paymentPromise.id, 'fecha', value)}
+                      />
+                      <FormInput
+                        label="Monto esperado para esa fecha"
+                        value={paymentPromise.monto}
+                        onChangeText={(value) => updatePromiseForm(paymentPromise.id, 'monto', value)}
+                        placeholder="Ej. 500"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+
+                <View style={styles.editorActions}>
+                  <Pressable onPress={addPromiseDate} style={styles.secondaryButton}>
+                    <Feather name="plus" size={13} color={colors.gold} />
+                    <Text style={styles.secondaryButtonText}>Agregar otra fecha</Text>
+                  </Pressable>
+                  <PrimaryButton
+                    title={savingSaleId === editingReceivable.sale.id ? 'Guardando...' : 'Guardar fechas'}
+                    onPress={savePromiseDates}
+                    disabled={savingSaleId === editingReceivable.sale.id}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -319,21 +758,14 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
-  },
-  dueDotActive: {
-    backgroundColor: colors.ink,
   },
   dueDotText: {
     color: colors.ink,
     fontSize: 10,
     fontWeight: '900',
-  },
-  dueDotTextActive: {
-    color: colors.gold,
   },
   panel: {
     backgroundColor: colors.surfaceCard,
@@ -368,12 +800,22 @@ const styles = StyleSheet.create({
   },
   saleTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
   },
   saleInfo: {
     flex: 1,
+  },
+  saleNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   saleClient: {
     color: colors.text,
@@ -384,15 +826,25 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
     fontSize: 11,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 3,
+  },
+  amountBlock: {
+    alignItems: 'flex-end',
   },
   remainingText: {
-    color: colors.gold,
     fontSize: 18,
     fontWeight: '900',
   },
+  amountCaption: {
+    color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
   saleNumbers: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: spacing.sm,
   },
@@ -400,6 +852,211 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '800',
+  },
+  outcomeSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.sm - 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    marginTop: spacing.sm,
+  },
+  outcomeSummaryText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: spacing.sm,
+  },
+  resultButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    ...shadow.glow,
+  },
+  resultButtonText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  outcomeBox: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.sm,
+  },
+  outcomeSegmentRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
+  outcomeSegment: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: radius.sm - 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  outcomeSegmentActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  outcomeSegmentText: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  outcomeSegmentTextActive: {
+    color: colors.ink,
+  },
+  editButton: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  editButtonText: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  editorBox: {
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
+  },
+  promiseEditor: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  promiseEditorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  promiseEditorTitle: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  removeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm - 4,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editorActions: {
+    gap: spacing.sm,
+  },
+  secondaryButton: {
+    minHeight: 40,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.surfaceCard,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  secondaryButtonText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(5, 5, 8, 0.68)',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheet: {
+    maxHeight: '88%',
+    backgroundColor: colors.surfaceCard,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    ...shadow.card,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  sheetKicker: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  sheetTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  sheetCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.glow,
+  },
+  sheetMeta: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginBottom: spacing.md,
+  },
+  sheetScroll: {
+    maxHeight: 420,
+    marginBottom: spacing.sm,
   },
   messageBox: {
     backgroundColor: colors.dangerSurface,
