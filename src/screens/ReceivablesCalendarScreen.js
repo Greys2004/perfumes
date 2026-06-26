@@ -85,6 +85,14 @@ function normalizeSalePromises(sale, remaining) {
     : [];
 }
 
+function getPaidAmountForDate(sale, date) {
+  const history = Array.isArray(sale.historial_cobranza) ? sale.historial_cobranza : [];
+
+  return history
+    .filter((item) => item.estado === 'pago' && item.fecha === date)
+    .reduce((sum, item) => sum + (Number(item.monto) || 0), 0);
+}
+
 export default function ReceivablesCalendarScreen() {
   const [sales, setSales] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -101,6 +109,8 @@ export default function ReceivablesCalendarScreen() {
     monto: '',
     metodo_pago: '',
     notas: '',
+    accion_no_pago: 'reprogramar',
+    nueva_fecha: getLocalDateString(),
   });
   const [savingSaleId, setSavingSaleId] = useState('');
   const [error, setError] = useState('');
@@ -150,14 +160,24 @@ export default function ReceivablesCalendarScreen() {
           return [];
         }
 
-        return promises.map((paymentPromise) => ({
-          ...paymentPromise,
-          sale,
-          paid,
-          total,
-          remaining,
-          expectedAmount: Number(paymentPromise.monto) || remaining,
-        }));
+        return promises
+          .map((paymentPromise) => {
+            const expectedAmount = Number(paymentPromise.monto) || remaining;
+            const paidForDate = getPaidAmountForDate(sale, paymentPromise.fecha);
+            const pendingForDate = Math.max(expectedAmount - paidForDate, 0);
+
+            return {
+              ...paymentPromise,
+              sale,
+              paid,
+              paidForDate,
+              total,
+              remaining,
+              pendingForDate,
+              expectedAmount,
+            };
+          })
+          .filter((receivable) => receivable.pendingForDate > 0);
       });
   }, [payments, sales]);
 
@@ -171,8 +191,25 @@ export default function ReceivablesCalendarScreen() {
     }, {});
   }, [receivables]);
 
+  const paidOutcomesByDate = useMemo(() => {
+    return sales.reduce((summary, sale) => {
+      const history = Array.isArray(sale.historial_cobranza) ? sale.historial_cobranza : [];
+
+      return history
+        .filter((item) => item.estado === 'pago')
+        .reduce((historySummary, item) => {
+          const items = historySummary[item.fecha] || [];
+          return {
+            ...historySummary,
+            [item.fecha]: [...items, { ...item, sale }],
+          };
+        }, summary);
+    }, {});
+  }, [sales]);
+
   const monthDays = useMemo(() => getMonthGrid(selectedDate), [selectedDate]);
   const selectedItems = receivablesByDate[selectedDate] || [];
+  const selectedPaidItems = paidOutcomesByDate[selectedDate] || [];
   const selectedMonth = parseDateString(selectedDate);
   const monthTitle = `${monthNames[selectedMonth.getMonth()]} ${selectedMonth.getFullYear()}`;
 
@@ -234,9 +271,11 @@ export default function ReceivablesCalendarScreen() {
     setOutcomeReceivable(receivable);
     setOutcomeForm({
       estado: 'pago',
-      monto: String(Math.min(receivable.expectedAmount, receivable.remaining) || ''),
+      monto: String(Math.min(receivable.pendingForDate, receivable.remaining) || ''),
       metodo_pago: '',
       notas: '',
+      accion_no_pago: 'reprogramar',
+      nueva_fecha: receivable.fecha,
     });
   }
 
@@ -309,14 +348,54 @@ export default function ReceivablesCalendarScreen() {
           fecha_pago: selectedDate,
           notas: outcomeForm.notas || 'Pago registrado desde calendario',
         });
-      }
 
-      await registerSaleCollectionOutcome(receivable.sale.id, {
-        fecha: selectedDate,
-        estado: paid ? 'pago' : 'no_pago',
-        monto: paid ? outcomeForm.monto : 0,
-        notas: outcomeForm.notas,
-      });
+        await registerSaleCollectionOutcome(receivable.sale.id, {
+          fecha: selectedDate,
+          estado: 'pago',
+          monto: outcomeForm.monto,
+          notas: outcomeForm.notas,
+        });
+      } else {
+        let matchedPromise = false;
+        const nextPromises = normalizeSalePromises(receivable.sale, receivable.remaining)
+          .filter((paymentPromise) =>
+            outcomeForm.accion_no_pago === 'cancelar'
+              ? paymentPromise.id !== receivable.id
+              : true
+          )
+          .map((paymentPromise) => {
+            if (paymentPromise.id !== receivable.id) {
+              return paymentPromise;
+            }
+
+            matchedPromise = true;
+            return {
+              ...paymentPromise,
+              fecha: outcomeForm.nueva_fecha || selectedDate,
+            };
+          });
+
+        if (outcomeForm.accion_no_pago === 'reprogramar' && !matchedPromise) {
+          nextPromises.push({
+            id: receivable.id || `${Date.now()}`,
+            fecha: outcomeForm.nueva_fecha || selectedDate,
+            monto: receivable.expectedAmount,
+          });
+        }
+
+        await updateSalePaymentPromises(receivable.sale.id, nextPromises);
+
+        try {
+          await registerSaleCollectionOutcome(receivable.sale.id, {
+            fecha: selectedDate,
+            estado: 'no_pago',
+            monto: 0,
+            notas: outcomeForm.notas,
+          });
+        } catch {
+          // La fecha reprogramada ya quedo guardada; el historial es complementario.
+        }
+      }
 
       setOutcomeReceivable(null);
       setOutcomeForm({
@@ -324,6 +403,8 @@ export default function ReceivablesCalendarScreen() {
         monto: '',
         metodo_pago: '',
         notas: '',
+        accion_no_pago: 'reprogramar',
+        nueva_fecha: getLocalDateString(),
       });
     } catch (firebaseError) {
       Alert.alert('No se pudo registrar la cobranza', firebaseError.message);
@@ -368,9 +449,11 @@ export default function ReceivablesCalendarScreen() {
         <View style={styles.calendarGrid}>
           {monthDays.map((day) => {
             const dayItems = receivablesByDate[day.value] || [];
+            const paidItems = paidOutcomesByDate[day.value] || [];
             const isSelected = day.value === selectedDate;
-            const hasPending = dayItems.some((item) => item.sale.estado_pago === 'pendiente');
-            const dotColor = hasPending ? colors.danger : colors.gold;
+            const hasOpenItems = dayItems.length > 0;
+            const dotColor = hasOpenItems ? colors.danger : colors.success;
+            const dotCount = hasOpenItems ? dayItems.length : paidItems.length;
 
             return (
               <Pressable
@@ -385,7 +468,7 @@ export default function ReceivablesCalendarScreen() {
                 <Text style={[styles.dayNumber, isSelected && styles.dayNumberActive]}>
                   {day.day}
                 </Text>
-                {dayItems.length > 0 && (
+                {dotCount > 0 && (
                   <View
                     style={[
                       styles.dueDot,
@@ -393,7 +476,7 @@ export default function ReceivablesCalendarScreen() {
                     ]}
                   >
                     <Text style={[styles.dueDotText, isSelected && { color: dotColor }]}>
-                      {dayItems.length}
+                      {dotCount}
                     </Text>
                   </View>
                 )}
@@ -410,7 +493,23 @@ export default function ReceivablesCalendarScreen() {
         </View>
 
         {selectedItems.length === 0 ? (
+          selectedPaidItems.length > 0 ? (
+            selectedPaidItems.map((item) => (
+              <View key={`${item.sale.id}-${item.id}`} style={styles.saleCard}>
+                <View style={styles.saleNameRow}>
+                  <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+                  <Text style={styles.saleClient}>{getClientName(item.sale.cliente_id)}</Text>
+                </View>
+                <Text style={styles.saleMeta}>{getSaleProducts(item.sale.id)}</Text>
+                <View style={styles.outcomeSummary}>
+                  <Feather name="check-circle" size={13} color={colors.success} />
+                  <Text style={styles.outcomeSummaryText}>Pago registrado: ${item.monto || 0}</Text>
+                </View>
+              </View>
+            ))
+          ) : (
           <Text style={styles.emptyText}>No hay pagos prometidos para este dia.</Text>
+          )
         ) : (
           selectedItems.map((receivable) => {
             const statusColor = getStatusColor(receivable.sale.estado_pago);
@@ -433,9 +532,9 @@ export default function ReceivablesCalendarScreen() {
                   </View>
                   <View style={styles.amountBlock}>
                     <Text style={[styles.remainingText, { color: statusColor }]}>
-                      ${receivable.expectedAmount}
+                      ${receivable.pendingForDate}
                     </Text>
-                    <Text style={styles.amountCaption}>programado</Text>
+                    <Text style={styles.amountCaption}>pendiente del dia</Text>
                   </View>
                 </View>
                 <View style={styles.saleNumbers}>
@@ -504,58 +603,95 @@ export default function ReceivablesCalendarScreen() {
 
             {!!outcomeReceivable && (
               <>
-                <Text style={styles.sheetMeta}>{getSaleProducts(outcomeReceivable.sale.id)}</Text>
-                <View style={styles.outcomeSegmentRow}>
-                  {[
-                    { label: 'Pago recibido', value: 'pago' },
-                    { label: 'No pago', value: 'no_pago' },
-                  ].map((option) => {
-                    const selected = outcomeForm.estado === option.value;
+                <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.sheetMeta}>{getSaleProducts(outcomeReceivable.sale.id)}</Text>
+                  <View style={styles.outcomeSegmentRow}>
+                    {[
+                      { label: 'Pago recibido', value: 'pago' },
+                      { label: 'No pago', value: 'no_pago' },
+                    ].map((option) => {
+                      const selected = outcomeForm.estado === option.value;
 
-                    return (
-                      <Pressable
-                        key={option.value}
-                        onPress={() => updateOutcomeField('estado', option.value)}
-                        style={[styles.outcomeSegment, selected && styles.outcomeSegmentActive]}
-                      >
-                        <Text style={[styles.outcomeSegmentText, selected && styles.outcomeSegmentTextActive]}>
-                          {option.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                      return (
+                        <Pressable
+                          key={option.value}
+                          onPress={() => updateOutcomeField('estado', option.value)}
+                          style={[styles.outcomeSegment, selected && styles.outcomeSegmentActive]}
+                        >
+                          <Text style={[styles.outcomeSegmentText, selected && styles.outcomeSegmentTextActive]}>
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {outcomeForm.estado === 'pago' && (
+                    <>
+                      <FormInput
+                        label="Cantidad pagada"
+                        value={outcomeForm.monto}
+                        onChangeText={(value) => updateOutcomeField('monto', value)}
+                        placeholder="Ej. 500"
+                        keyboardType="numeric"
+                      />
+                      <FormInput
+                        label="Metodo de pago"
+                        value={outcomeForm.metodo_pago}
+                        onChangeText={(value) => updateOutcomeField('metodo_pago', value)}
+                        placeholder="Efectivo, transferencia..."
+                      />
+                    </>
+                  )}
+
+                  {outcomeForm.estado === 'no_pago' && (
+                    <>
+                      <View style={styles.outcomeSegmentRow}>
+                        {[
+                          { label: 'Reprogramar', value: 'reprogramar' },
+                          { label: 'Cancelar fecha', value: 'cancelar' },
+                        ].map((option) => {
+                          const selected = outcomeForm.accion_no_pago === option.value;
+
+                          return (
+                            <Pressable
+                              key={option.value}
+                              onPress={() => updateOutcomeField('accion_no_pago', option.value)}
+                              style={[styles.outcomeSegment, selected && styles.outcomeSegmentActive]}
+                            >
+                              <Text style={[styles.outcomeSegmentText, selected && styles.outcomeSegmentTextActive]}>
+                                {option.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+
+                      {outcomeForm.accion_no_pago === 'reprogramar' && (
+                        <CalendarDatePicker
+                          label="Nueva fecha"
+                          value={outcomeForm.nueva_fecha}
+                          onChange={(value) => updateOutcomeField('nueva_fecha', value)}
+                        />
+                      )}
+                    </>
+                  )}
+
+                  <FormInput
+                    label={outcomeForm.estado === 'pago' ? 'Notas' : 'Motivo / seguimiento'}
+                    value={outcomeForm.notas}
+                    onChangeText={(value) => updateOutcomeField('notas', value)}
+                    placeholder={outcomeForm.estado === 'pago' ? 'Comentario opcional' : 'Ej. Reprogramar, no contesto...'}
+                  />
+                </ScrollView>
+
+                <View style={styles.sheetFooter}>
+                  <PrimaryButton
+                    title={savingSaleId === outcomeReceivable.sale.id ? 'Guardando...' : 'Guardar resultado'}
+                    onPress={() => saveCollectionOutcome(outcomeReceivable)}
+                    disabled={savingSaleId === outcomeReceivable.sale.id}
+                  />
                 </View>
-
-                {outcomeForm.estado === 'pago' && (
-                  <>
-                    <FormInput
-                      label="Cantidad pagada"
-                      value={outcomeForm.monto}
-                      onChangeText={(value) => updateOutcomeField('monto', value)}
-                      placeholder="Ej. 500"
-                      keyboardType="numeric"
-                    />
-                    <FormInput
-                      label="Metodo de pago"
-                      value={outcomeForm.metodo_pago}
-                      onChangeText={(value) => updateOutcomeField('metodo_pago', value)}
-                      placeholder="Efectivo, transferencia..."
-                    />
-                  </>
-                )}
-
-                <FormInput
-                  label={outcomeForm.estado === 'pago' ? 'Notas' : 'Motivo / seguimiento'}
-                  value={outcomeForm.notas}
-                  onChangeText={(value) => updateOutcomeField('notas', value)}
-                  placeholder={outcomeForm.estado === 'pago' ? 'Comentario opcional' : 'Ej. Reprogramar, no contesto...'}
-                />
-
-                <PrimaryButton
-                  title={savingSaleId === outcomeReceivable.sale.id ? 'Guardando...' : 'Guardar resultado'}
-                  onPress={() => saveCollectionOutcome(outcomeReceivable)}
-                  disabled={savingSaleId === outcomeReceivable.sale.id}
-                />
               </>
             )}
           </View>
@@ -1055,8 +1191,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sheetScroll: {
-    maxHeight: 420,
-    marginBottom: spacing.sm,
+    maxHeight: 470,
+  },
+  sheetFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
+    marginTop: spacing.sm,
   },
   messageBox: {
     backgroundColor: colors.dangerSurface,

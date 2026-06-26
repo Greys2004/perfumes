@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -41,7 +42,10 @@ function getInitialForm() {
     metodo_pago: '',
     fecha_venta: today,
     fecha_pago_promesa: today,
-    fechas_pago_promesa: [{ id: `${Date.now()}`, fecha: today, monto: '' }],
+    monto_pago_programado: '',
+    dividir_en_dias: '',
+    pago_programado_activo_id: '',
+    fechas_pago_promesa: [],
     notas: '',
   };
 }
@@ -87,6 +91,7 @@ export default function SaleFormScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [inventoryLoaded, setInventoryLoaded] = useState(true);
+  const [paymentPlanEditor, setPaymentPlanEditor] = useState(null);
 
   useEffect(() => {
     const unsubscribeClients = listenClients(setClients, (firebaseError) =>
@@ -174,6 +179,49 @@ export default function SaleFormScreen({ navigation }) {
   const shouldShowInitialPaymentInput = form.estado_pago_inicial === 'parcial';
   const shouldShowPromiseDate = form.estado_pago_inicial !== 'completa';
   const remainingAfterInitialPayment = Math.max(total - (Number(form.pago_inicial) || 0), 0);
+  const scheduledPaymentTotal = useMemo(() => {
+    return form.fechas_pago_promesa.reduce(
+      (sum, paymentPromise) => sum + (Number(paymentPromise.monto) || 0),
+      0
+    );
+  }, [form.fechas_pago_promesa]);
+  const scheduledPaymentDifference = Number(
+    (remainingAfterInitialPayment - scheduledPaymentTotal).toFixed(2)
+  );
+  const paymentPlanStatus = useMemo(() => {
+    if (!shouldShowPromiseDate) {
+      return {
+        tone: 'success',
+        message: 'Venta liquidada al momento del registro.',
+      };
+    }
+
+    if (scheduledPaymentTotal <= 0) {
+      return {
+        tone: 'warning',
+        message: `No hay fechas programadas. Falta programar $${remainingAfterInitialPayment}.`,
+      };
+    }
+
+    if (scheduledPaymentDifference > 0) {
+      return {
+        tone: 'warning',
+        message: `Faltan $${scheduledPaymentDifference} por programar.`,
+      };
+    }
+
+    if (scheduledPaymentDifference < 0) {
+      return {
+        tone: 'danger',
+        message: `Te pasaste por $${Math.abs(scheduledPaymentDifference)} del saldo pendiente.`,
+      };
+    }
+
+    return {
+      tone: 'success',
+      message: 'El plan cubre exactamente el saldo pendiente.',
+    };
+  }, [remainingAfterInitialPayment, scheduledPaymentDifference, scheduledPaymentTotal, shouldShowPromiseDate]);
 
   useEffect(() => {
     if (!form.perfume_id || availablePurchases.length === 0) {
@@ -247,8 +295,6 @@ export default function SaleFormScreen({ navigation }) {
   }
 
   function selectInitialPaymentStatus(status) {
-    const pendingAmount = status === 'completa' ? 0 : Math.max(total - (status === 'pendiente' ? 0 : Number(form.pago_inicial) || 0), 0);
-
     setForm((currentForm) => ({
       ...currentForm,
       estado_pago_inicial: status,
@@ -260,12 +306,7 @@ export default function SaleFormScreen({ navigation }) {
             : currentForm.pago_inicial === '0'
               ? ''
               : currentForm.pago_inicial,
-      fechas_pago_promesa:
-        status === 'completa'
-          ? []
-          : currentForm.fechas_pago_promesa?.length
-            ? currentForm.fechas_pago_promesa
-            : [{ id: `${Date.now()}`, fecha: currentForm.fecha_pago_promesa || getLocalDateString(), monto: String(pendingAmount || '') }],
+      fechas_pago_promesa: status === 'completa' ? [] : currentForm.fechas_pago_promesa,
     }));
   }
 
@@ -277,6 +318,166 @@ export default function SaleFormScreen({ navigation }) {
           ? { ...paymentPromise, [field]: value }
           : paymentPromise
       ),
+    }));
+  }
+
+  function addScheduledPaymentFromSelectedDate() {
+    const selectedDate = form.fecha_pago_promesa || getLocalDateString();
+    const amount = form.monto_pago_programado || String(remainingAfterInitialPayment || '');
+
+    setForm((currentForm) => {
+      const existingPromise = currentForm.fechas_pago_promesa.find(
+        (paymentPromise) => paymentPromise.fecha === selectedDate
+      );
+      const nextPromises = existingPromise
+        ? currentForm.fechas_pago_promesa.map((paymentPromise) =>
+            paymentPromise.fecha === selectedDate
+              ? { ...paymentPromise, monto: amount }
+              : paymentPromise
+          )
+        : [
+            ...currentForm.fechas_pago_promesa,
+            {
+              id: `${Date.now()}`,
+              fecha: selectedDate,
+              monto: amount,
+            },
+          ];
+
+      return {
+        ...currentForm,
+        monto_pago_programado: '',
+        fechas_pago_promesa: nextPromises.filter((paymentPromise) => paymentPromise.fecha),
+      };
+    });
+  }
+
+  function splitScheduledPayments() {
+    const days = Number(form.dividir_en_dias) || 0;
+
+    if (days <= 0) {
+      Alert.alert('Falta dividir', 'Escribe en cuantos dias quieres dividir el saldo.');
+      return;
+    }
+
+    const baseAmount = remainingAfterInitialPayment / days;
+    const nextPromises = Array.from({ length: days }, (_, index) => {
+      const amount = index === days - 1
+        ? remainingAfterInitialPayment - Number((baseAmount * (days - 1)).toFixed(2))
+        : baseAmount;
+
+      return {
+        id: `${Date.now()}-${index}`,
+        fecha: '',
+        monto: String(Number(amount.toFixed(2))),
+      };
+    });
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      fechas_pago_promesa: nextPromises,
+      pago_programado_activo_id: nextPromises[0]?.id || '',
+      fecha_pago_promesa: currentForm.fecha_pago_promesa || getLocalDateString(),
+      monto_pago_programado: '',
+    }));
+  }
+
+  function openPaymentPlanEditor(paymentPromise) {
+    const unprogrammedAmount = Math.max(remainingAfterInitialPayment - scheduledPaymentTotal, 0);
+    const fallbackAmount = paymentPromise?.monto || form.monto_pago_programado || String(unprogrammedAmount || remainingAfterInitialPayment || '');
+
+    setPaymentPlanEditor({
+      id: paymentPromise?.id || `${Date.now()}`,
+      fecha: paymentPromise?.fecha || form.fecha_pago_promesa || getLocalDateString(),
+      monto: String(fallbackAmount || ''),
+      isNew: !paymentPromise,
+    });
+  }
+
+  function updatePaymentPlanEditor(field, value) {
+    setPaymentPlanEditor((currentEditor) => ({
+      ...currentEditor,
+      [field]: value,
+    }));
+  }
+
+  function savePaymentPlanEditor() {
+    if (!paymentPlanEditor?.fecha) {
+      Alert.alert('Falta fecha', 'Selecciona la fecha programada.');
+      return;
+    }
+
+    if (!paymentPlanEditor?.monto) {
+      Alert.alert('Falta monto', 'Escribe el monto esperado para esa fecha.');
+      return;
+    }
+
+    setForm((currentForm) => {
+      const exists = currentForm.fechas_pago_promesa.some(
+        (paymentPromise) => paymentPromise.id === paymentPlanEditor.id
+      );
+      const nextPromise = {
+        id: paymentPlanEditor.id,
+        fecha: paymentPlanEditor.fecha,
+        monto: paymentPlanEditor.monto,
+      };
+
+      return {
+        ...currentForm,
+        fecha_pago_promesa: nextPromise.fecha,
+        pago_programado_activo_id: nextPromise.id,
+        monto_pago_programado: '',
+        fechas_pago_promesa: exists
+          ? currentForm.fechas_pago_promesa.map((paymentPromise) =>
+              paymentPromise.id === nextPromise.id ? nextPromise : paymentPromise
+            )
+          : [...currentForm.fechas_pago_promesa, nextPromise],
+      };
+    });
+    setPaymentPlanEditor(null);
+  }
+
+  function selectScheduledPayment(paymentPromise) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      pago_programado_activo_id: paymentPromise.id,
+      fecha_pago_promesa: paymentPromise.fecha,
+      monto_pago_programado: String(paymentPromise.monto || ''),
+    }));
+  }
+
+  function updateSelectedScheduledDate(value) {
+    setForm((currentForm) => {
+      if (!currentForm.pago_programado_activo_id) {
+        return {
+          ...currentForm,
+          fecha_pago_promesa: value,
+        };
+      }
+
+      return {
+        ...currentForm,
+        fecha_pago_promesa: value,
+        fechas_pago_promesa: currentForm.fechas_pago_promesa.map((paymentPromise) =>
+          paymentPromise.id === currentForm.pago_programado_activo_id
+            ? { ...paymentPromise, fecha: value }
+            : paymentPromise
+        ),
+      };
+    });
+  }
+
+  function updateScheduledAmount(value) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      monto_pago_programado: value,
+      fechas_pago_promesa: currentForm.pago_programado_activo_id
+        ? currentForm.fechas_pago_promesa.map((paymentPromise) =>
+            paymentPromise.id === currentForm.pago_programado_activo_id
+              ? { ...paymentPromise, monto: value }
+              : paymentPromise
+          )
+        : currentForm.fechas_pago_promesa,
     }));
   }
 
@@ -331,6 +532,22 @@ export default function SaleFormScreen({ navigation }) {
         `Seleccionaste ${selectedStockMl} ml disponibles. Agrega otra compra de inventario para completar la venta.`
       );
       return;
+    }
+
+    if (shouldShowPromiseDate) {
+      const scheduledPayments = form.fechas_pago_promesa.filter(
+        (paymentPromise) => paymentPromise.fecha && Number(paymentPromise.monto) > 0
+      );
+
+      if (scheduledPayments.length === 0) {
+        Alert.alert('Falta plan de pago', 'Agrega al menos una fecha con monto esperado.');
+        return;
+      }
+
+      if (scheduledPaymentDifference !== 0) {
+        Alert.alert('Plan de pago incompleto', paymentPlanStatus.message);
+        return;
+      }
     }
 
     try {
@@ -565,43 +782,78 @@ export default function SaleFormScreen({ navigation }) {
                   <Text style={styles.sectionHeading}>Fechas prometidas de pago</Text>
                   <Text style={styles.promiseHint}>Saldo por cobrar: ${remainingAfterInitialPayment}</Text>
                 </View>
-                <Pressable onPress={addPaymentPromise} style={styles.promiseAddButton}>
-                  <Feather name="plus" size={14} color={colors.ink} />
-                </Pressable>
               </View>
 
-              {form.fechas_pago_promesa.map((paymentPromise, index) => (
-                <View key={paymentPromise.id} style={styles.promiseCard}>
-                  <View style={styles.promiseCardHeader}>
-                    <Text style={styles.promiseTitle}>Pago {index + 1}</Text>
-                    {form.fechas_pago_promesa.length > 1 && (
+              <View style={styles.promiseSplitBox}>
+                <FormInput
+                  label="Dividir saldo en pagos"
+                  value={form.dividir_en_dias}
+                  onChangeText={(value) => updateField('dividir_en_dias', value)}
+                  placeholder="Ej. 3"
+                  keyboardType="numeric"
+                />
+                <PrimaryButton
+                  title="Crear division"
+                  onPress={splitScheduledPayments}
+                  variant="secondary"
+                />
+              </View>
+
+              <View style={styles.promiseList}>
+                <View style={styles.promiseListHeader}>
+                  <Text style={styles.promiseListHint}>Plan de pagos</Text>
+                  <Pressable onPress={() => openPaymentPlanEditor()} style={styles.promiseAddButton}>
+                    <Feather name="plus" size={14} color={colors.ink} />
+                  </Pressable>
+                </View>
+                <View
+                  style={[
+                    styles.planStatusBox,
+                    paymentPlanStatus.tone === 'success' && styles.planStatusSuccess,
+                    paymentPlanStatus.tone === 'danger' && styles.planStatusDanger,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.planStatusText,
+                      paymentPlanStatus.tone === 'success' && styles.planStatusTextSuccess,
+                      paymentPlanStatus.tone === 'danger' && styles.planStatusTextDanger,
+                    ]}
+                  >
+                    {paymentPlanStatus.message}
+                  </Text>
+                  <Text style={styles.planStatusSubtext}>
+                    Programado: ${scheduledPaymentTotal} de ${remainingAfterInitialPayment}
+                  </Text>
+                </View>
+                {form.fechas_pago_promesa
+                  .map((paymentPromise) => (
+                    <Pressable
+                      key={paymentPromise.id}
+                      onPress={() => openPaymentPlanEditor(paymentPromise)}
+                      style={[
+                        styles.promisePill,
+                        form.pago_programado_activo_id === paymentPromise.id && styles.promisePillActive,
+                      ]}
+                    >
+                      <View>
+                        <Text style={styles.promisePillDate}>{paymentPromise.fecha || 'Elegir fecha'}</Text>
+                        <Text style={styles.promisePillAmount}>
+                          ${Number(paymentPromise.monto) || remainingAfterInitialPayment}
+                        </Text>
+                      </View>
                       <Pressable
                         onPress={() => removePaymentPromise(paymentPromise.id)}
                         style={styles.promiseRemoveButton}
                       >
                         <Feather name="x" size={13} color={colors.textMuted} />
                       </Pressable>
-                    )}
-                  </View>
-                  <CalendarDatePicker
-                    label="Fecha prometida"
-                    value={paymentPromise.fecha}
-                    onChange={(value) => {
-                      updatePaymentPromise(paymentPromise.id, 'fecha', value);
-                      if (index === 0) {
-                        updateField('fecha_pago_promesa', value);
-                      }
-                    }}
-                  />
-                  <FormInput
-                    label="Monto esperado"
-                    value={paymentPromise.monto}
-                    onChangeText={(value) => updatePaymentPromise(paymentPromise.id, 'monto', value)}
-                    placeholder={index === 0 ? String(remainingAfterInitialPayment || '') : 'Ej. 200'}
-                    keyboardType="numeric"
-                  />
-                </View>
-              ))}
+                    </Pressable>
+                  ))}
+                {form.fechas_pago_promesa.length === 0 && (
+                  <Text style={styles.emptyText}>Agrega una fecha o crea una division del saldo.</Text>
+                )}
+              </View>
             </View>
           )}
           
@@ -622,6 +874,48 @@ export default function SaleFormScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+      <Modal
+        visible={!!paymentPlanEditor}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPaymentPlanEditor(null)}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable style={styles.sheetBackdrop} onPress={() => setPaymentPlanEditor(null)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={styles.sheetKicker}>Plan de pago</Text>
+                <Text style={styles.sheetTitle}>Fecha y monto</Text>
+              </View>
+              <Pressable onPress={() => setPaymentPlanEditor(null)} style={styles.sheetCloseButton}>
+                <Feather name="x" size={16} color={colors.ink} />
+              </Pressable>
+            </View>
+            {!!paymentPlanEditor && (
+              <>
+                <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                  <FormInput
+                    label="Monto esperado"
+                    value={paymentPlanEditor.monto}
+                    onChangeText={(value) => updatePaymentPlanEditor('monto', value)}
+                    placeholder={String(remainingAfterInitialPayment || '')}
+                    keyboardType="numeric"
+                  />
+                  <CalendarDatePicker
+                    label="Fecha programada"
+                    value={paymentPlanEditor.fecha}
+                    onChange={(value) => updatePaymentPlanEditor('fecha', value)}
+                  />
+                </ScrollView>
+                <View style={styles.sheetFooter}>
+                  <PrimaryButton title="Guardar pago programado" onPress={savePaymentPlanEditor} />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -958,6 +1252,151 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  promiseComposer: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  promiseSplitBox: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  promiseList: {
+    gap: 8,
+  },
+  promiseListHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  promiseListHint: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  planStatusBox: {
+    backgroundColor: 'rgba(229, 192, 123, 0.1)',
+    borderColor: colors.lineStrong,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+  },
+  planStatusSuccess: {
+    backgroundColor: 'rgba(108, 178, 143, 0.12)',
+    borderColor: 'rgba(108, 178, 143, 0.35)',
+  },
+  planStatusDanger: {
+    backgroundColor: colors.dangerSurface,
+    borderColor: colors.dangerLine,
+  },
+  planStatusText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  planStatusTextSuccess: {
+    color: colors.success,
+  },
+  planStatusTextDanger: {
+    color: colors.danger,
+  },
+  planStatusSubtext: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  promisePill: {
+    minHeight: 50,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+  },
+  promisePillActive: {
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+  },
+  promisePillDate: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  promisePillAmount: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(5, 5, 8, 0.68)',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheet: {
+    maxHeight: '88%',
+    backgroundColor: colors.surfaceCard,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    ...shadow.card,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  sheetKicker: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  sheetTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  sheetCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.glow,
+  },
+  sheetScroll: {
+    maxHeight: 470,
+  },
+  sheetFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
+    marginTop: spacing.sm,
   },
   dateBox: {
     backgroundColor: colors.surfaceRaised,
