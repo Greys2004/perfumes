@@ -71,6 +71,36 @@ function normalizePaymentPromises(saleData) {
     .filter((paymentPromise) => paymentPromise.fecha);
 }
 
+function normalizeSaleItems(saleData) {
+  if (Array.isArray(saleData.items) && saleData.items.length > 0) {
+    return saleData.items.map((item) => ({
+      perfume_id: item.perfume_id,
+      tipo_producto: item.tipo_producto,
+      ml_vendidos: Number(item.ml_vendidos) || 0,
+      cantidad: Number(item.cantidad) || 1,
+      precio_unitario: Number(item.precio_unitario) || 0,
+      subtotal: Number(item.subtotal) || 0,
+      compra_ids: item.compra_ids?.length
+        ? item.compra_ids
+        : [item.compra_id].filter(Boolean),
+    }));
+  }
+
+  return [
+    {
+      perfume_id: saleData.perfume_id,
+      tipo_producto: saleData.tipo_producto,
+      ml_vendidos: Number(saleData.ml_vendidos) || 0,
+      cantidad: Number(saleData.cantidad) || 1,
+      precio_unitario: Number(saleData.precio_unitario) || 0,
+      subtotal: Number(saleData.total) || 0,
+      compra_ids: saleData.compra_ids?.length
+        ? saleData.compra_ids
+        : [saleData.compra_id].filter(Boolean),
+    },
+  ];
+}
+
 async function updateSalePaymentStatus(saleId) {
   const saleRef = doc(db, 'ventas', saleId);
   const saleSnapshot = await getDoc(saleRef);
@@ -143,18 +173,14 @@ export function listenPaymentsBySale(saleId, onPaymentsChange, onError) {
 export async function createSale(saleData) {
   const total = Number(saleData.total) || 0;
   const initialPayment = Number(saleData.pago_inicial) || 0;
-  const mlSold = Number(saleData.ml_vendidos) || 0;
-  const quantity = Number(saleData.cantidad) || 1;
-  const unitPrice = Number(saleData.precio_unitario) || 0;
-  const purchaseIds = saleData.compra_ids?.length
-    ? saleData.compra_ids
-    : [saleData.compra_id].filter(Boolean);
+  const saleItems = normalizeSaleItems(saleData);
+  const purchaseIds = [...new Set(saleItems.flatMap((item) => item.compra_ids))];
   const purchaseRefs = purchaseIds.map((purchaseId) => doc(db, 'compras', purchaseId));
   const paymentPromises = normalizePaymentPromises(saleData);
-  const firstPromiseDate = paymentPromises[0]?.fecha || saleData.fecha_pago_promesa || '';
+  const firstPromiseDate = paymentPromises[0]?.fecha || '';
 
   return runTransaction(db, async (transaction) => {
-    const stockSources = [];
+    const stockByPurchaseId = {};
 
     for (const purchaseRef of purchaseRefs) {
       const purchaseSnapshot = await transaction.get(purchaseRef);
@@ -166,24 +192,61 @@ export async function createSale(saleData) {
       const purchase = purchaseSnapshot.data();
       const currentMl = Number(purchase.ml_restantes) || 0;
 
-      if (currentMl > 0) {
-        stockSources.push({
-          id: purchaseSnapshot.id,
-          ref: purchaseRef,
-          currentMl,
-        });
-      }
+      stockByPurchaseId[purchaseSnapshot.id] = {
+        id: purchaseSnapshot.id,
+        ref: purchaseRef,
+        currentMl,
+      };
     }
 
-    const totalAvailableMl = stockSources.reduce((sum, source) => sum + source.currentMl, 0);
+    const remainingStockByPurchaseId = purchaseIds.reduce((summary, purchaseId) => ({
+      ...summary,
+      [purchaseId]: stockByPurchaseId[purchaseId]?.currentMl || 0,
+    }), {});
 
-    if (mlSold > totalAvailableMl) {
-      throw new Error(`Solo hay ${totalAvailableMl} ml disponibles en las compras seleccionadas.`);
+    saleItems.forEach((item) => {
+      const totalAvailableMl = item.compra_ids.reduce(
+        (sum, purchaseId) => sum + (remainingStockByPurchaseId[purchaseId] || 0),
+        0
+      );
+
+      if (item.ml_vendidos <= 0 || item.compra_ids.length === 0) {
+        throw new Error('Cada producto de la venta debe tener mililitros y compras de inventario seleccionadas.');
+      }
+
+      if (item.ml_vendidos > totalAvailableMl) {
+        throw new Error(`Solo hay ${totalAvailableMl} ml disponibles en las compras seleccionadas.`);
+      }
+
+      let remainingMl = item.ml_vendidos;
+      item.compra_ids
+        .map((purchaseId) => ({
+          id: purchaseId,
+          currentMl: remainingStockByPurchaseId[purchaseId] || 0,
+        }))
+        .filter((source) => source.currentMl > 0)
+        .sort((a, b) => a.currentMl - b.currentMl)
+        .forEach((source) => {
+          if (remainingMl <= 0) {
+            return;
+          }
+
+          const mlFromPurchase = Math.min(source.currentMl, remainingMl);
+          remainingStockByPurchaseId[source.id] -= mlFromPurchase;
+          remainingMl -= mlFromPurchase;
+        });
+    });
+
+    Object.keys(remainingStockByPurchaseId).forEach((purchaseId) => {
+      remainingStockByPurchaseId[purchaseId] = stockByPurchaseId[purchaseId]?.currentMl || 0;
+    });
+
+    if (saleItems.length === 0) {
+      throw new Error('Agrega al menos un producto a la venta.');
     }
 
     const saleRef = doc(salesCollection);
     const now = serverTimestamp();
-    let remainingMl = mlSold;
 
     transaction.set(saleRef, {
       cliente_id: saleData.cliente_id,
@@ -194,47 +257,61 @@ export async function createSale(saleData) {
       estado_pago: getPaymentStatus(total, initialPayment),
       notas: saleData.notas.trim(),
       compra_ids: purchaseIds,
+      productos_count: saleItems.length,
       created_at: now,
     });
 
-    stockSources
-      .sort((a, b) => a.currentMl - b.currentMl)
-      .forEach((source, index) => {
-        if (remainingMl <= 0) {
-          return;
-        }
+    saleItems.forEach((item) => {
+      let remainingMl = item.ml_vendidos;
 
-        const mlFromPurchase = Math.min(source.currentMl, remainingMl);
-        const detailRef = doc(saleDetailsCollection);
-        const movementRef = doc(inventoryMovementsCollection);
-        const ratio = mlSold > 0 ? mlFromPurchase / mlSold : 0;
+      item.compra_ids
+        .map((purchaseId) => ({
+          id: purchaseId,
+          ref: stockByPurchaseId[purchaseId].ref,
+          currentMl: remainingStockByPurchaseId[purchaseId] || 0,
+        }))
+        .filter((source) => source.currentMl > 0)
+        .sort((a, b) => a.currentMl - b.currentMl)
+        .forEach((source, index) => {
+          if (remainingMl <= 0) {
+            return;
+          }
 
-        transaction.set(detailRef, {
-          venta_id: saleRef.id,
-          perfume_id: saleData.perfume_id,
-          compra_id: source.id,
-          tipo_producto: saleData.tipo_producto,
-          ml_vendidos: mlFromPurchase,
-          cantidad: index === 0 ? quantity : 0,
-          precio_unitario: unitPrice,
-          subtotal: Number((total * ratio).toFixed(2)),
+          const mlFromPurchase = Math.min(source.currentMl, remainingMl);
+          const detailRef = doc(saleDetailsCollection);
+          const movementRef = doc(inventoryMovementsCollection);
+          const ratio = item.ml_vendidos > 0 ? mlFromPurchase / item.ml_vendidos : 0;
+
+          transaction.set(detailRef, {
+            venta_id: saleRef.id,
+            perfume_id: item.perfume_id,
+            compra_id: source.id,
+            tipo_producto: item.tipo_producto,
+            ml_vendidos: mlFromPurchase,
+            cantidad: index === 0 ? item.cantidad : 0,
+            precio_unitario: item.precio_unitario,
+            subtotal: Number((item.subtotal * ratio).toFixed(2)),
+          });
+
+          transaction.set(movementRef, {
+            compra_id: source.id,
+            tipo: 'salida_venta',
+            ml: mlFromPurchase,
+            referencia: saleRef.id,
+            fecha: saleData.fecha_venta,
+            notas: `Venta registrada por ${mlFromPurchase} ml`,
+          });
+
+          remainingStockByPurchaseId[source.id] -= mlFromPurchase;
+          remainingMl -= mlFromPurchase;
         });
+    });
 
-        transaction.set(movementRef, {
-          compra_id: source.id,
-          tipo: 'salida_venta',
-          ml: mlFromPurchase,
-          referencia: saleRef.id,
-          fecha: saleData.fecha_venta,
-          notas: `Venta registrada por ${mlFromPurchase} ml`,
-        });
-
-        transaction.update(source.ref, {
-          ml_restantes: source.currentMl - mlFromPurchase,
-        });
-
-        remainingMl -= mlFromPurchase;
+    purchaseIds.forEach((purchaseId) => {
+      transaction.update(stockByPurchaseId[purchaseId].ref, {
+        ml_restantes: remainingStockByPurchaseId[purchaseId],
       });
+    });
 
     if (initialPayment > 0) {
       const paymentRef = doc(paymentsCollection);
@@ -313,7 +390,7 @@ export async function deletePayment(saleId, paymentId) {
 
 export async function updateSaleBasic(saleId, saleData) {
   const paymentPromises = normalizePaymentPromises(saleData);
-  const firstPromiseDate = paymentPromises[0]?.fecha || saleData.fecha_pago_promesa || '';
+  const firstPromiseDate = paymentPromises[0]?.fecha || '';
 
   await updateDoc(doc(db, 'ventas', saleId), {
     fecha_venta: saleData.fecha_venta,

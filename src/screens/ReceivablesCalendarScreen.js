@@ -112,6 +112,11 @@ export default function ReceivablesCalendarScreen() {
     accion_no_pago: 'reprogramar',
     nueva_fecha: getLocalDateString(),
   });
+  const [rescheduleReceivable, setRescheduleReceivable] = useState(null);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    nueva_fecha: getLocalDateString(),
+    monto_pendiente: '',
+  });
   const [savingSaleId, setSavingSaleId] = useState('');
   const [error, setError] = useState('');
 
@@ -286,6 +291,21 @@ export default function ReceivablesCalendarScreen() {
     }));
   }
 
+  function openPartialPaymentReschedule(receivable, pendingAmount) {
+    setRescheduleReceivable(receivable);
+    setRescheduleForm({
+      nueva_fecha: getLocalDateString(),
+      monto_pendiente: String(Number(pendingAmount.toFixed(2))),
+    });
+  }
+
+  function updateRescheduleField(field, value) {
+    setRescheduleForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
   function updatePromiseForm(promiseId, field, value) {
     setPromiseForm((currentForm) =>
       currentForm.map((paymentPromise) =>
@@ -332,6 +352,7 @@ export default function ReceivablesCalendarScreen() {
 
   async function saveCollectionOutcome(receivable) {
     const paid = outcomeForm.estado === 'pago';
+    const paidAmount = Number(outcomeForm.monto) || 0;
 
     if (paid && !outcomeForm.monto.trim()) {
       Alert.alert('Falta el monto', 'Escribe cuanto pago el cliente.');
@@ -346,7 +367,7 @@ export default function ReceivablesCalendarScreen() {
           monto: outcomeForm.monto,
           metodo_pago: outcomeForm.metodo_pago,
           fecha_pago: selectedDate,
-          notas: outcomeForm.notas || 'Pago registrado desde calendario',
+          notas: outcomeForm.notas || 'Pago calendario',
         });
 
         await registerSaleCollectionOutcome(receivable.sale.id, {
@@ -355,6 +376,12 @@ export default function ReceivablesCalendarScreen() {
           monto: outcomeForm.monto,
           notas: outcomeForm.notas,
         });
+
+        const pendingAfterPayment = Math.max(receivable.pendingForDate - paidAmount, 0);
+
+        if (pendingAfterPayment > 0) {
+          openPartialPaymentReschedule(receivable, pendingAfterPayment);
+        }
       } else {
         let matchedPromise = false;
         const nextPromises = normalizeSalePromises(receivable.sale, receivable.remaining)
@@ -408,6 +435,81 @@ export default function ReceivablesCalendarScreen() {
       });
     } catch (firebaseError) {
       Alert.alert('No se pudo registrar la cobranza', firebaseError.message);
+    } finally {
+      setSavingSaleId('');
+    }
+  }
+
+  async function savePartialPaymentReschedule() {
+    if (!rescheduleReceivable) {
+      return;
+    }
+
+    if (!rescheduleForm.nueva_fecha) {
+      Alert.alert('Falta fecha', 'Selecciona a que dia quieres reprogramar el pendiente.');
+      return;
+    }
+
+    const pendingAmount = Number(rescheduleForm.monto_pendiente) || 0;
+
+    if (pendingAmount <= 0) {
+      Alert.alert('Falta monto', 'El monto pendiente debe ser mayor a 0.');
+      return;
+    }
+
+    const paidForPromise = Math.max(
+      rescheduleReceivable.expectedAmount - pendingAmount,
+      0
+    );
+    const normalizedPromises = normalizeSalePromises(
+      rescheduleReceivable.sale,
+      rescheduleReceivable.remaining
+    );
+    let matchedPromise = false;
+    const nextPromises = normalizedPromises
+      .flatMap((paymentPromise) => {
+        if (paymentPromise.id !== rescheduleReceivable.id) {
+          return [paymentPromise];
+        }
+
+        matchedPromise = true;
+
+        if (paidForPromise <= 0) {
+          return [];
+        }
+
+        return [
+          {
+            ...paymentPromise,
+            monto: Number(paidForPromise.toFixed(2)),
+          },
+        ];
+      });
+
+    nextPromises.push({
+      id: `${rescheduleReceivable.id || rescheduleReceivable.sale.id}-pendiente-${Date.now()}`,
+      fecha: rescheduleForm.nueva_fecha,
+      monto: pendingAmount,
+    });
+
+    if (!matchedPromise && paidForPromise > 0) {
+      nextPromises.push({
+        id: rescheduleReceivable.id || `${rescheduleReceivable.sale.id}-pagado-${Date.now()}`,
+        fecha: rescheduleReceivable.fecha,
+        monto: Number(paidForPromise.toFixed(2)),
+      });
+    }
+
+    try {
+      setSavingSaleId(rescheduleReceivable.sale.id);
+      await updateSalePaymentPromises(rescheduleReceivable.sale.id, nextPromises);
+      setRescheduleReceivable(null);
+      setRescheduleForm({
+        nueva_fecha: getLocalDateString(),
+        monto_pendiente: '',
+      });
+    } catch (firebaseError) {
+      Alert.alert('No se pudo reprogramar el pendiente', firebaseError.message);
     } finally {
       setSavingSaleId('');
     }
@@ -690,6 +792,66 @@ export default function ReceivablesCalendarScreen() {
                     title={savingSaleId === outcomeReceivable.sale.id ? 'Guardando...' : 'Guardar resultado'}
                     onPress={() => saveCollectionOutcome(outcomeReceivable)}
                     disabled={savingSaleId === outcomeReceivable.sale.id}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!rescheduleReceivable}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRescheduleReceivable(null)}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable style={styles.sheetBackdrop} onPress={() => setRescheduleReceivable(null)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={styles.sheetKicker}>Pago pendiente</Text>
+                <Text style={styles.sheetTitle}>
+                  {rescheduleReceivable
+                    ? getClientName(rescheduleReceivable.sale.cliente_id)
+                    : ''}
+                </Text>
+              </View>
+              <Pressable onPress={() => setRescheduleReceivable(null)} style={styles.sheetCloseButton}>
+                <Feather name="x" size={16} color={colors.ink} />
+              </Pressable>
+            </View>
+
+            {!!rescheduleReceivable && (
+              <>
+                <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.sheetMeta}>
+                    El pago no cubrio el monto esperado. Reprograma el faltante para otra fecha.
+                  </Text>
+                  <View style={styles.rescheduleSummary}>
+                    <Text style={styles.rescheduleLabel}>Pendiente a reprogramar</Text>
+                    <Text style={styles.rescheduleAmount}>${rescheduleForm.monto_pendiente}</Text>
+                  </View>
+                  <CalendarDatePicker
+                    label="Nueva fecha"
+                    value={rescheduleForm.nueva_fecha}
+                    onChange={(value) => updateRescheduleField('nueva_fecha', value)}
+                  />
+                  <FormInput
+                    label="Monto pendiente"
+                    value={rescheduleForm.monto_pendiente}
+                    onChangeText={(value) => updateRescheduleField('monto_pendiente', value)}
+                    placeholder="Ej. 500"
+                    keyboardType="numeric"
+                  />
+                </ScrollView>
+
+                <View style={styles.sheetFooter}>
+                  <PrimaryButton
+                    title={savingSaleId === rescheduleReceivable.sale.id ? 'Reprogramando...' : 'Reprogramar pendiente'}
+                    onPress={savePartialPaymentReschedule}
+                    disabled={savingSaleId === rescheduleReceivable.sale.id}
                   />
                 </View>
               </>
@@ -1192,6 +1354,26 @@ const styles = StyleSheet.create({
   },
   sheetScroll: {
     maxHeight: 470,
+  },
+  rescheduleSummary: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  rescheduleLabel: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  rescheduleAmount: {
+    color: colors.gold,
+    fontSize: 24,
+    fontWeight: '900',
   },
   sheetFooter: {
     borderTopWidth: 1,

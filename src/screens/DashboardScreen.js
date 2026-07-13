@@ -44,10 +44,9 @@ function normalizeDate(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function getPeriodRange(period) {
-  const now = new Date();
-  const start = new Date(now);
-  const end = new Date(now);
+function getPeriodRange(period, anchorDate) {
+  const start = new Date(anchorDate);
+  const end = new Date(anchorDate);
 
   start.setHours(0, 0, 0, 0);
   end.setHours(23, 59, 59, 999);
@@ -69,6 +68,31 @@ function getPeriodRange(period) {
   return { start, end };
 }
 
+function addPeriod(anchorDate, period, direction) {
+  const nextDate = new Date(anchorDate);
+
+  if (period === 'day') {
+    nextDate.setDate(nextDate.getDate() + direction);
+    return nextDate;
+  }
+
+  if (period === 'week') {
+    nextDate.setDate(nextDate.getDate() + direction * 7);
+    return nextDate;
+  }
+
+  nextDate.setMonth(nextDate.getMonth() + direction);
+  return nextDate;
+}
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 function isInRange(value, range) {
   const date = normalizeDate(value);
 
@@ -79,21 +103,25 @@ function isInRange(value, range) {
   return date >= range.start && date <= range.end;
 }
 
-function getPeriodLabel(period) {
+function getPeriodLabel(period, range) {
   if (period === 'day') {
-    return 'hoy';
+    return formatDate(range.start);
   }
 
   if (period === 'week') {
-    return 'esta semana';
+    return `${formatDate(range.start)} a ${formatDate(range.end)}`;
   }
 
-  return 'este mes';
+  return range.start.toLocaleDateString('es-MX', {
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 export default function DashboardScreen() {
   const [data, setData] = useState(initialData);
   const [period, setPeriod] = useState('month');
+  const [periodAnchor, setPeriodAnchor] = useState(() => new Date());
   const [error, setError] = useState('');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(18)).current;
@@ -139,7 +167,8 @@ export default function DashboardScreen() {
   }
 
   const dashboard = useMemo(() => calculateDashboardData(data), [data]);
-  const periodRange = useMemo(() => getPeriodRange(period), [period]);
+  const periodRange = useMemo(() => getPeriodRange(period, periodAnchor), [period, periodAnchor]);
+  const periodLabel = useMemo(() => getPeriodLabel(period, periodRange), [period, periodRange]);
   const periodData = useMemo(() => {
     const periodSaleIds = data.sales
       .filter((sale) => isInRange(sale.fecha_venta, periodRange))
@@ -151,6 +180,7 @@ export default function DashboardScreen() {
       payments: data.payments.filter((payment) => isInRange(payment.fecha_pago, periodRange)),
       saleDetails: data.saleDetails.filter((detail) => periodSaleIds.includes(detail.venta_id)),
       perfumes: data.perfumes,
+      purchaseCatalog: data.purchases,
     };
   }, [data, periodRange]);
   const periodDashboard = useMemo(() => calculateDashboardData(periodData), [periodData]);
@@ -186,7 +216,7 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.statusChip}>
               <Text style={styles.statusChipText}>
-                {getPeriodLabel(period).toUpperCase()}
+                {periodLabel.toUpperCase()}
               </Text>
             </View>
           </View>
@@ -195,7 +225,10 @@ export default function DashboardScreen() {
             {periodOptions.map((option) => (
               <Pressable
                 key={option.value}
-                onPress={() => setPeriod(option.value)}
+                onPress={() => {
+                  setPeriod(option.value);
+                  setPeriodAnchor(new Date());
+                }}
                 style={[styles.periodTab, period === option.value && styles.periodTabActive]}
               >
                 <Text
@@ -210,8 +243,26 @@ export default function DashboardScreen() {
             ))}
           </View>
 
+          <View style={styles.periodNavigator}>
+            <Pressable
+              onPress={() => setPeriodAnchor((currentDate) => addPeriod(currentDate, period, -1))}
+              style={styles.periodStepButton}
+            >
+              <Feather name="chevron-left" size={16} color={colors.text} />
+            </Pressable>
+            <Pressable onPress={() => setPeriodAnchor(new Date())} style={styles.periodCurrentButton}>
+              <Text style={styles.periodCurrentText}>{periodLabel}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setPeriodAnchor((currentDate) => addPeriod(currentDate, period, 1))}
+              style={styles.periodStepButton}
+            >
+              <Feather name="chevron-right" size={16} color={colors.text} />
+            </Pressable>
+          </View>
+
           <View style={styles.heroMain}>
-            <Text style={styles.heroLabel}>Total Vendido {getPeriodLabel(period)}</Text>
+            <Text style={styles.heroLabel}>Total Vendido: {periodLabel}</Text>
             <Text
               style={[
                 styles.heroValue,
@@ -253,13 +304,19 @@ export default function DashboardScreen() {
         </ScrollView>
 
         <View style={styles.panel}>
-          <SectionHeader icon="map" title="Mapa del Periodo" detail={`Cifras de rendimiento ${getPeriodLabel(period)}`} />
+          <SectionHeader icon="map" title="Mapa del Periodo" detail={`Cifras de rendimiento: ${periodLabel}`} />
           <MoneyBar label="Vendido" value={periodDashboard.totalVendido} maxValue={maxMoney} color={colors.text} />
           <MoneyBar label="Cobrado" value={periodDashboard.totalPagado} maxValue={maxMoney} color={colors.success} />
           <MoneyBar label="Deuda de Clientes" value={periodDashboard.deudaClientes} maxValue={maxMoney} color={colors.gold} muted />
           <MoneyBar label="Ganancia Estimada (Ventas)" value={periodDashboard.gananciaVendida} maxValue={maxMoney} color={colors.gold} />
           <MoneyBar label="Ganancia Real (Cobrado)" value={periodDashboard.gananciaCobrada} maxValue={maxMoney} color={colors.success} muted />
           <MoneyBar label="Diferencia Gastado/Cobrado" value={periodDashboard.gastadoMenosPagado} maxValue={maxMoney} color={colors.danger} muted />
+        </View>
+
+        <View style={styles.panel}>
+          <SectionHeader icon="bar-chart-2" title="Ganancia por Tipo" detail="Perfumes completos y decants vendidos en el periodo" />
+          <ProfitTypeCard label="Perfumes" data={periodDashboard.profitabilityByType.perfumes} />
+          <ProfitTypeCard label="Decants" data={periodDashboard.profitabilityByType.decants} />
         </View>
 
         <View style={styles.panel}>
@@ -274,7 +331,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.panel}>
-          <SectionHeader icon="award" title="Ranking Más Vendidos" detail={`Perfumes líderes ${getPeriodLabel(period)}`} />
+          <SectionHeader icon="award" title="Ranking Más Vendidos" detail={`Perfumes lideres: ${periodLabel}`} />
           {periodDashboard.perfumesMasVendidos.length === 0 ? (
             <Text style={styles.emptyText}>No hay ventas en este periodo.</Text>
           ) : (
@@ -367,6 +424,20 @@ function MoneyBar({ label, value, maxValue, color, muted = false }) {
             { width },
           ]}
         />
+      </View>
+    </View>
+  );
+}
+
+function ProfitTypeCard({ label, data }) {
+  const profit = Number(data.ganancia || 0).toFixed(2);
+  const isNegative = Number(profit) < 0;
+
+  return (
+    <View style={styles.profitTypeCard}>
+      <View style={styles.rowTextGroup}>
+        <Text style={styles.rowTitle}>{label}</Text>
+        <Text style={styles.rowSubtext}>Vendido: ${Number(data.vendido || 0).toFixed(2)}</Text>
       </View>
     </View>
   );
@@ -519,6 +590,41 @@ const styles = StyleSheet.create({
   },
   periodTabTextActive: {
     color: colors.ink,
+  },
+  periodNavigator: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  periodStepButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodCurrentButton: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  periodCurrentText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
   heroMain: {
     marginBottom: spacing.md,
@@ -683,6 +789,33 @@ const styles = StyleSheet.create({
   moneyFill: {
     height: '100%',
     borderRadius: radius.pill,
+  },
+  profitTypeCard: {
+    minHeight: 64,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  profitNumbers: {
+    alignItems: 'flex-end',
+    gap: 3,
+  },
+  profitExpense: {
+    color: colors.danger,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  profitValue: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
   },
   stockRow: {
     minHeight: 64,

@@ -88,10 +88,12 @@ export default function SaleFormScreen({ navigation }) {
   const [prices, setPrices] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [form, setForm] = useState(() => getInitialForm());
+  const [saleItems, setSaleItems] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [inventoryLoaded, setInventoryLoaded] = useState(true);
   const [paymentPlanEditor, setPaymentPlanEditor] = useState(null);
+  const [manualStockSelection, setManualStockSelection] = useState(false);
 
   useEffect(() => {
     const unsubscribeClients = listenClients(setClients, (firebaseError) =>
@@ -173,9 +175,13 @@ export default function SaleFormScreen({ navigation }) {
 
     return '';
   }, [form.perfume_id, inventoryLoaded, requestedMl, totalAvailableStockMl]);
-  const total = useMemo(() => {
+  const currentItemTotal = useMemo(() => {
     return (Number(form.precio_unitario) || 0) * (Number(form.cantidad) || 1);
   }, [form.precio_unitario, form.cantidad]);
+  const cartTotal = useMemo(() => {
+    return saleItems.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+  }, [saleItems]);
+  const total = saleItems.length > 0 ? cartTotal : currentItemTotal;
   const shouldShowInitialPaymentInput = form.estado_pago_inicial === 'parcial';
   const shouldShowPromiseDate = form.estado_pago_inicial !== 'completa';
   const remainingAfterInitialPayment = Math.max(total - (Number(form.pago_inicial) || 0), 0);
@@ -224,7 +230,7 @@ export default function SaleFormScreen({ navigation }) {
   }, [remainingAfterInitialPayment, scheduledPaymentDifference, scheduledPaymentTotal, shouldShowPromiseDate]);
 
   useEffect(() => {
-    if (!form.perfume_id || availablePurchases.length === 0) {
+    if (!form.perfume_id || availablePurchases.length === 0 || manualStockSelection) {
       return;
     }
 
@@ -240,7 +246,7 @@ export default function SaleFormScreen({ navigation }) {
         compra_ids: suggestedIds,
       };
     });
-  }, [availablePurchases, form.ml_vendidos, form.perfume_id]);
+  }, [availablePurchases, form.ml_vendidos, form.perfume_id, manualStockSelection]);
 
   useEffect(() => {
     if (form.estado_pago_inicial === 'completa') {
@@ -261,6 +267,7 @@ export default function SaleFormScreen({ navigation }) {
   }
 
   function selectPerfume(perfume) {
+    setManualStockSelection(false);
     setForm((currentForm) => ({
       ...currentForm,
       perfume_id: perfume.id,
@@ -280,6 +287,30 @@ export default function SaleFormScreen({ navigation }) {
       tipo_producto: typeValue,
       ml_vendidos: String(ml * quantity),
       precio_unitario: price ? String(price.precio_publico) : currentForm.precio_unitario,
+    }));
+  }
+
+  function togglePurchaseSelection(purchase) {
+    setManualStockSelection(true);
+    setForm((currentForm) => {
+      const isSelected = currentForm.compra_ids.includes(purchase.id);
+
+      return {
+        ...currentForm,
+        compra_ids: isSelected
+          ? currentForm.compra_ids.filter((purchaseId) => purchaseId !== purchase.id)
+          : [...currentForm.compra_ids, purchase.id],
+      };
+    });
+  }
+
+  function resetAutomaticStockSelection() {
+    const suggestedIds = getSuggestedPurchaseIds(availablePurchases, form.ml_vendidos);
+
+    setManualStockSelection(false);
+    setForm((currentForm) => ({
+      ...currentForm,
+      compra_ids: suggestedIds,
     }));
   }
 
@@ -308,6 +339,69 @@ export default function SaleFormScreen({ navigation }) {
               : currentForm.pago_inicial,
       fechas_pago_promesa: status === 'completa' ? [] : currentForm.fechas_pago_promesa,
     }));
+  }
+
+  function getCurrentSaleItem() {
+    return {
+      id: `${Date.now()}`,
+      perfume_id: form.perfume_id,
+      perfume_nombre: selectedPerfume?.nombre || 'Perfume sin nombre',
+      tipo_producto: form.tipo_producto,
+      tipo_label: selectedType?.label || form.tipo_producto,
+      ml_vendidos: Number(form.ml_vendidos) || 0,
+      cantidad: Number(form.cantidad) || 1,
+      precio_unitario: Number(form.precio_unitario) || 0,
+      subtotal: currentItemTotal,
+      compra_ids: form.compra_ids,
+      stock_seleccionado: selectedStockMl,
+    };
+  }
+
+  function resetCurrentProductForm() {
+    setManualStockSelection(false);
+    setForm((currentForm) => ({
+      ...currentForm,
+      perfume_id: '',
+      compra_ids: [],
+      tipo_producto: 'decant_3ml',
+      ml_vendidos: '3',
+      cantidad: '1',
+      precio_unitario: '',
+    }));
+  }
+
+  function addCurrentItemToSale() {
+    if (!form.perfume_id || form.compra_ids.length === 0) {
+      Alert.alert('Faltan datos', 'Selecciona perfume y al menos una compra de inventario.');
+      return false;
+    }
+
+    if (!form.precio_unitario.trim() || !form.ml_vendidos.trim()) {
+      Alert.alert('Faltan importes', 'Escribe precio unitario y ml vendidos.');
+      return false;
+    }
+
+    if (stockValidationMessage) {
+      Alert.alert('Stock insuficiente', stockValidationMessage);
+      return false;
+    }
+
+    if (requestedMl > selectedStockMl) {
+      Alert.alert(
+        'Stock insuficiente',
+        `Seleccionaste ${selectedStockMl} ml disponibles. Agrega otra compra de inventario para completar la venta.`
+      );
+      return false;
+    }
+
+    const nextItem = getCurrentSaleItem();
+    setSaleItems((currentItems) => [...currentItems, nextItem]);
+    resetCurrentProductForm();
+    return true;
+  }
+
+  function removeSaleItem(itemId) {
+    setSaleItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
   }
 
   function updatePaymentPromise(promiseId, field, value) {
@@ -511,36 +605,28 @@ export default function SaleFormScreen({ navigation }) {
   }
 
   async function handleSave() {
-    if (!form.cliente_id || !form.perfume_id || form.compra_ids.length === 0) {
-      Alert.alert('Faltan datos', 'Selecciona cliente, perfume y al menos una compra de inventario.');
+    if (!form.cliente_id) {
+      Alert.alert('Faltan datos', 'Selecciona cliente.');
       return;
     }
 
-    if (!form.precio_unitario.trim() || !form.ml_vendidos.trim()) {
-      Alert.alert('Faltan importes', 'Escribe precio unitario y ml vendidos.');
-      return;
+    let itemsToSave = saleItems;
+
+    if (itemsToSave.length === 0) {
+      if (!addCurrentItemToSale()) {
+        return;
+      }
+
+      itemsToSave = [getCurrentSaleItem()];
     }
 
-    if (stockValidationMessage) {
-      Alert.alert('Stock insuficiente', stockValidationMessage);
-      return;
-    }
-
-    if (requestedMl > selectedStockMl) {
-      Alert.alert(
-        'Stock insuficiente',
-        `Seleccionaste ${selectedStockMl} ml disponibles. Agrega otra compra de inventario para completar la venta.`
-      );
-      return;
-    }
-
-    if (shouldShowPromiseDate) {
+    if (shouldShowPromiseDate && form.fechas_pago_promesa.length > 0) {
       const scheduledPayments = form.fechas_pago_promesa.filter(
         (paymentPromise) => paymentPromise.fecha && Number(paymentPromise.monto) > 0
       );
 
-      if (scheduledPayments.length === 0) {
-        Alert.alert('Falta plan de pago', 'Agrega al menos una fecha con monto esperado.');
+      if (scheduledPayments.length !== form.fechas_pago_promesa.length) {
+        Alert.alert('Plan de pago incompleto', 'Completa fecha y monto en las fechas programadas, o elimina las que no uses.');
         return;
       }
 
@@ -554,9 +640,11 @@ export default function SaleFormScreen({ navigation }) {
       setSaving(true);
       await createSale({
         ...form,
+        items: itemsToSave,
         total,
       });
       setForm(getInitialForm());
+      setSaleItems([]);
       navigation.navigate('Payments');
     } catch (firebaseError) {
       Alert.alert('No se pudo guardar la venta', firebaseError.message);
@@ -690,8 +778,8 @@ export default function SaleFormScreen({ navigation }) {
           />
 
           <View style={styles.totalBlock}>
-            <Text style={styles.totalLabel}>TOTAL A PAGAR</Text>
-            <Text style={styles.totalText}>${total}</Text>
+            <Text style={styles.totalLabel}>SUBTOTAL PRODUCTO</Text>
+            <Text style={styles.totalText}>${currentItemTotal}</Text>
           </View>
         </View>
 
@@ -701,7 +789,7 @@ export default function SaleFormScreen({ navigation }) {
             <Text style={styles.panelTitle}>Inventario Utilizado</Text>
           </View>
           <Text style={styles.hint}>
-            La app selecciona automáticamente el lote con menos stock activo para optimizar la salida de botellas abiertas.
+            Por default se selecciona el lote con menos stock activo, pero puedes tocar una botella para cambiarla.
           </Text>
           <OptionGrid
             items={availablePurchases}
@@ -711,8 +799,14 @@ export default function SaleFormScreen({ navigation }) {
               `${purchase.ml_restantes} ml disponibles  ·  Lote: ${purchase.proveedor || 'Sin proveedor'}`
             }
             emptyText="No hay compras de lotes con stock para esta fragancia."
-            onSelect={() => {}}
+            onSelect={togglePurchaseSelection}
           />
+          {manualStockSelection && availablePurchases.length > 0 && (
+            <Pressable onPress={resetAutomaticStockSelection} style={styles.resetStockButton}>
+              <Feather name="refresh-cw" size={13} color={colors.ink} style={{ marginRight: 6 }} />
+              <Text style={styles.resetStockButtonText}>Usar seleccion automatica</Text>
+            </Pressable>
+          )}
           {form.compra_ids.length > 0 && (
             <View style={styles.selectedStockWrapper}>
               <Feather name="check" size={14} color={colors.success} style={{ marginRight: 4 }} />
@@ -723,6 +817,53 @@ export default function SaleFormScreen({ navigation }) {
             <Text style={[styles.selectedStockText, styles.totalStockText]}>
               Stock total disponible: {totalAvailableStockMl} ml
             </Text>
+          )}
+          <View style={{ marginTop: spacing.md }}>
+            <PrimaryButton
+              title="Agregar producto a venta"
+              onPress={addCurrentItemToSale}
+              variant="secondary"
+            />
+          </View>
+        </View>
+
+        <View style={styles.panel}>
+          <View style={styles.panelHeader}>
+            <Feather name="shopping-bag" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Productos en la Venta</Text>
+          </View>
+          {saleItems.length === 0 ? (
+            <Text style={styles.emptyText}>
+              Agrega uno o varios perfumes antes de registrar la venta. Si guardas sin agregar, se usara el producto actual.
+            </Text>
+          ) : (
+            <>
+              {saleItems.map((item, index) => (
+                <View key={item.id} style={styles.cartItem}>
+                  <View style={styles.rowTextGroup}>
+                    <Text style={styles.rowTitle}>
+                      {index + 1}. {item.perfume_nombre}
+                    </Text>
+                    <Text style={styles.rowSubtext}>
+                      {item.tipo_label}  ·  {item.ml_vendidos} ml  ·  {item.cantidad} pza
+                    </Text>
+                    <Text style={styles.rowSubtext}>
+                      Stock seleccionado: {item.stock_seleccionado} ml
+                    </Text>
+                  </View>
+                  <View style={styles.cartItemActions}>
+                    <Text style={styles.rowValue}>${item.subtotal}</Text>
+                    <Pressable onPress={() => removeSaleItem(item.id)} style={styles.removeCartButton}>
+                      <Feather name="trash-2" size={12} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+              <View style={styles.totalBlock}>
+                <Text style={styles.totalLabel}>TOTAL A PAGAR</Text>
+                <Text style={styles.totalText}>${total}</Text>
+              </View>
+            </>
           )}
         </View>
 
@@ -869,7 +1010,7 @@ export default function SaleFormScreen({ navigation }) {
             <PrimaryButton
               title={saving ? 'Guardando Venta...' : 'Registrar Venta'}
               onPress={handleSave}
-              disabled={saving || !!stockValidationMessage}
+              disabled={saving || (saleItems.length === 0 && !!stockValidationMessage)}
             />
           </View>
         </View>
@@ -1165,6 +1306,52 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginTop: 4,
   },
+  cartItem: {
+    minHeight: 68,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  rowTextGroup: {
+    flex: 1,
+  },
+  rowTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  rowSubtext: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  rowValue: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  cartItemActions: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  removeCartButton: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm - 4,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   selectedStockWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1178,6 +1365,21 @@ const styles = StyleSheet.create({
   totalStockText: {
     color: colors.textSubtle,
     marginTop: spacing.xs,
+  },
+  resetStockButton: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  resetStockButtonText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '900',
   },
   inlineErrorBox: {
     flexDirection: 'row',

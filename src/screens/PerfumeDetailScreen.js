@@ -489,6 +489,10 @@ function InventoryPurchase({
   onCancel,
   onSave,
 }) {
+  const normalCost = Number(purchase.costo_compra) || 0;
+  const discountedCost = Number(purchase.costo_con_descuento) || 0;
+  const hasDiscount = !!purchase.tuvo_descuento && discountedCost > 0;
+
   if (isEditing) {
     return (
       <View style={styles.inventoryEditBox}>
@@ -532,9 +536,16 @@ function InventoryPurchase({
         )}
       </View>
       <View style={styles.inventoryActions}>
-        <Text style={exhausted ? styles.exhaustedBadge : styles.rowValue}>
-          {exhausted ? '0 ml' : `$${purchase.costo_compra}`}
-        </Text>
+        {exhausted ? (
+          <Text style={styles.exhaustedBadge}>0 ml</Text>
+        ) : (
+          <View style={styles.costStack}>
+            <Text style={styles.costLabel}>Real: ${normalCost}</Text>
+            {hasDiscount && (
+              <Text style={styles.discountCostLabel}>Desc: ${discountedCost}</Text>
+            )}
+          </View>
+        )}
         <Pressable onPress={onEdit} style={styles.adjustStockButton}>
           <Feather name="edit" size={11} color={colors.ink} style={{ marginRight: 4 }} />
           <Text style={styles.adjustStockButtonText}>Ajustar</Text>
@@ -714,6 +725,20 @@ const styles = StyleSheet.create({
   inventoryActions: {
     alignItems: 'flex-end',
     gap: 6,
+  },
+  costStack: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  costLabel: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  discountCostLabel: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '900',
   },
   inventoryEditBox: {
     flex: 1,
