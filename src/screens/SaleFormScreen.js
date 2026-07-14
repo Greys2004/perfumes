@@ -304,7 +304,6 @@ export default function SaleFormScreen({ navigation }) {
 
   function selectPerfume(perfume) {
     setManualStockSelection(false);
-    setPerfumeSearch(perfume.nombre || '');
     setForm((currentForm) => ({
       ...currentForm,
       perfume_id: perfume.id,
@@ -730,7 +729,6 @@ export default function SaleFormScreen({ navigation }) {
             getLabel={(client) => client.nombre}
             emptyText="Primero registra un cliente en el directorio."
             onSelect={(client) => {
-              setClientSearch(client.nombre || '');
               updateField('cliente_id', client.id);
             }}
           />

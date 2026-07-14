@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -24,10 +24,29 @@ const typeLabels = {
   botella_completa: 'Botella completa',
 };
 
+const perfumeTypeFilters = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Diseñador', value: 'diseñador' },
+  { label: 'Nicho', value: 'nicho' },
+  { label: 'Arabe', value: 'arabe' },
+];
+
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 export default function HomeScreen() {
   const [perfumes, setPerfumes] = useState([]);
   const [prices, setPrices] = useState([]);
   const [search, setSearch] = useState('');
+  const [selectedType, setSelectedType] = useState('all');
+  const [selectedBrand, setSelectedBrand] = useState('all');
+  const [brandSearch, setBrandSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [showPrices, setShowPrices] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,21 +74,40 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const searchText = search.toLowerCase();
-  const filteredPerfumes = perfumes.filter((perfume) => {
-    const searchableText = [
-      perfume.nombre,
-      perfume.marca,
-      perfume.descripcion_olor,
-      perfume.notas_salida,
-      perfume.notas_corazon,
-      perfume.notas_fondo,
-    ]
-      .join(' ')
-      .toLowerCase();
+  const searchText = normalizeText(search);
+  const filteredPerfumes = useMemo(() => {
+    return perfumes.filter((perfume) => {
+      const searchableText = normalizeText([
+        perfume.nombre,
+        perfume.marca,
+        perfume.descripcion_olor,
+        perfume.categoria_perfume,
+        perfume.notas_salida,
+        perfume.notas_corazon,
+        perfume.notas_fondo,
+      ].join(' '));
+      const matchesSearch = !searchText || searchableText.includes(searchText);
+      const matchesType = selectedType === 'all' || perfume.categoria_perfume === selectedType;
+      const matchesBrand = selectedBrand === 'all' || perfume.marca === selectedBrand;
 
-    return searchableText.includes(searchText);
-  });
+      return matchesSearch && matchesType && matchesBrand;
+    });
+  }, [perfumes, searchText, selectedBrand, selectedType]);
+  const availableBrands = useMemo(() => {
+    const brands = [...new Set(perfumes.map((perfume) => perfume.marca).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+    const normalizedBrandSearch = normalizeText(brandSearch);
+
+    if (!normalizedBrandSearch) {
+      return brands.slice(0, 8);
+    }
+
+    return brands.filter((brand) => normalizeText(brand).includes(normalizedBrandSearch)).slice(0, 8);
+  }, [brandSearch, perfumes]);
+  const activeFiltersCount = [
+    selectedType !== 'all',
+    selectedBrand !== 'all',
+  ].filter(Boolean).length;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -97,8 +135,90 @@ export default function HomeScreen() {
       <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por aroma, marca o nombre..."
+        placeholder="Buscar por aroma, marca, tipo o nombre..."
       />
+
+      <Pressable onPress={() => setFiltersOpen((open) => !open)} style={styles.filterToggle}>
+        <View style={styles.filterToggleLeft}>
+          <Feather name="sliders" size={14} color={colors.gold} />
+          <Text style={styles.filterToggleText}>Filtros</Text>
+          {activeFiltersCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountText}>{activeFiltersCount}</Text>
+            </View>
+          )}
+        </View>
+        <Feather name={filtersOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSubtle} />
+      </Pressable>
+
+      {filtersOpen && (
+        <View style={styles.filtersPanel}>
+          <Text style={styles.filterLabel}>Tipo de perfume</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+            {perfumeTypeFilters.map((filter) => {
+              const selected = selectedType === filter.value;
+
+              return (
+                <Pressable
+                  key={filter.value}
+                  onPress={() => setSelectedType(filter.value)}
+                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                    {filter.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <Text style={styles.filterLabel}>Marca</Text>
+          <SearchBar
+            value={brandSearch}
+            onChangeText={setBrandSearch}
+            placeholder="Buscar marca..."
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+            <Pressable
+              onPress={() => setSelectedBrand('all')}
+              style={[styles.filterChip, selectedBrand === 'all' && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterChipText, selectedBrand === 'all' && styles.filterChipTextActive]}>
+                Todas
+              </Text>
+            </Pressable>
+            {availableBrands.map((brand) => {
+              const selected = selectedBrand === brand;
+
+              return (
+                <Pressable
+                  key={brand}
+                  onPress={() => setSelectedBrand(brand)}
+                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                    {brand}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {activeFiltersCount > 0 && (
+            <Pressable
+              onPress={() => {
+                setSelectedType('all');
+                setSelectedBrand('all');
+                setBrandSearch('');
+              }}
+              style={styles.clearFiltersButton}
+            >
+              <Feather name="x" size={13} color={colors.ink} />
+              <Text style={styles.clearFiltersText}>Limpiar filtros</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
 
@@ -135,6 +255,9 @@ export default function HomeScreen() {
               <View style={styles.cardInfo}>
                 <Text style={styles.cardTitle}>{perfume.nombre}</Text>
                 <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
+                {!!perfume.categoria_perfume && (
+                  <Text style={styles.cardCategory}>{perfume.categoria_perfume}</Text>
+                )}
                 {!!perfume.duracion && (
                   <View style={styles.duracionRow}>
                     <Feather name="clock" size={12} color={colors.gold} />
@@ -290,6 +413,101 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
   },
+  filterToggle: {
+    minHeight: 42,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.sm,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  filterToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  filterToggleText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  filterCountBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  filterCountText: {
+    color: colors.ink,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  filtersPanel: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  filterLabel: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  filterChipRow: {
+    gap: 6,
+    paddingBottom: spacing.sm,
+  },
+  filterChip: {
+    minHeight: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  filterChipActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  filterChipText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  filterChipTextActive: {
+    color: colors.ink,
+  },
+  clearFiltersButton: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    marginTop: spacing.xs,
+  },
+  clearFiltersText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '900',
+  },
   loader: {
     marginTop: 36,
   },
@@ -379,6 +597,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
+  },
+  cardCategory: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 3,
+    textTransform: 'uppercase',
   },
   duracionRow: {
     flexDirection: 'row',
