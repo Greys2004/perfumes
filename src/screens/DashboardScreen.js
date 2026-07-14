@@ -135,6 +135,27 @@ function getPeriodLabel(period, range) {
   });
 }
 
+function getPeriodPickerCopy(period) {
+  if (period === 'day') {
+    return {
+      label: 'Elegir día',
+      hint: 'Selecciona el día exacto que quieres revisar.',
+    };
+  }
+
+  if (period === 'week') {
+    return {
+      label: 'Elegir semana',
+      hint: 'Selecciona cualquier día de la semana que quieres revisar.',
+    };
+  }
+
+  return {
+    label: 'Elegir mes',
+    hint: 'Selecciona cualquier día del mes que quieres revisar.',
+  };
+}
+
 export default function DashboardScreen() {
   const [data, setData] = useState(initialData);
   const [period, setPeriod] = useState('month');
@@ -186,6 +207,7 @@ export default function DashboardScreen() {
   const dashboard = useMemo(() => calculateDashboardData(data), [data]);
   const periodRange = useMemo(() => getPeriodRange(period, periodAnchor), [period, periodAnchor]);
   const periodLabel = useMemo(() => getPeriodLabel(period, periodRange), [period, periodRange]);
+  const periodPickerCopy = getPeriodPickerCopy(period);
   const periodData = useMemo(() => {
     const periodSaleIds = data.sales
       .filter((sale) => isInRange(sale.fecha_venta, periodRange))
@@ -299,10 +321,11 @@ export default function DashboardScreen() {
 
           <View style={styles.directDateBox}>
             <CalendarDatePicker
-              label="Ir directo a fecha"
+              label={periodPickerCopy.label}
               value={formatDate(periodAnchor)}
               onChange={(value) => setPeriodAnchor(new Date(`${value}T00:00:00`))}
             />
+            <Text style={styles.directDateHint}>{periodPickerCopy.hint}</Text>
           </View>
 
           <View style={styles.heroMain}>
@@ -742,6 +765,14 @@ const styles = StyleSheet.create({
   },
   directDateBox: {
     marginBottom: spacing.md,
+  },
+  directDateHint: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 16,
+    marginTop: -spacing.md,
+    marginBottom: spacing.sm,
   },
   heroMain: {
     marginBottom: spacing.md,
