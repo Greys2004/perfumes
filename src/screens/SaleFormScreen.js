@@ -83,6 +83,43 @@ function getPresentationMl(type, selectedPerfume, quantity) {
   return unitMl * quantity;
 }
 
+function getReservedStockByPurchase(items) {
+  const reservedByPurchaseId = {};
+  const remainingByPurchaseId = {};
+
+  items.forEach((item) => {
+    item.compra_ids.forEach((purchaseId) => {
+      if (remainingByPurchaseId[purchaseId] === undefined) {
+        remainingByPurchaseId[purchaseId] = Number(item.stock_por_compra?.[purchaseId]) || 0;
+      }
+    });
+  });
+
+  items.forEach((item) => {
+    let remainingMl = Number(item.ml_vendidos) || 0;
+
+    item.compra_ids
+      .map((purchaseId) => ({
+        id: purchaseId,
+        currentMl: remainingByPurchaseId[purchaseId] || 0,
+      }))
+      .filter((source) => source.currentMl > 0)
+      .sort((a, b) => a.currentMl - b.currentMl)
+      .forEach((source) => {
+        if (remainingMl <= 0) {
+          return;
+        }
+
+        const mlFromPurchase = Math.min(source.currentMl, remainingMl);
+        reservedByPurchaseId[source.id] = (reservedByPurchaseId[source.id] || 0) + mlFromPurchase;
+        remainingByPurchaseId[source.id] -= mlFromPurchase;
+        remainingMl -= mlFromPurchase;
+      });
+  });
+
+  return reservedByPurchaseId;
+}
+
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFD')
@@ -178,12 +215,25 @@ export default function SaleFormScreen({ navigation }) {
       ].join(' ')).includes(searchText)
     );
   }, [perfumes, perfumeSearch]);
+  const reservedStockByPurchase = useMemo(() => getReservedStockByPurchase(saleItems), [saleItems]);
   const availablePurchases = useMemo(
     () =>
       purchases
+        .map((purchase) => {
+          const originalMl = Number(purchase.ml_restantes) || 0;
+          const reservedMl = Number(reservedStockByPurchase[purchase.id]) || 0;
+          const adjustedMl = Math.max(originalMl - reservedMl, 0);
+
+          return {
+            ...purchase,
+            ml_originales_disponibles: originalMl,
+            ml_reservados_en_venta: reservedMl,
+            ml_restantes: adjustedMl,
+          };
+        })
         .filter((purchase) => Number(purchase.ml_restantes) > 0)
         .sort((a, b) => (Number(a.ml_restantes) || 0) - (Number(b.ml_restantes) || 0)),
-    [purchases]
+    [purchases, reservedStockByPurchase]
   );
   const selectedType = presentationTypes.find((type) => type.value === form.tipo_producto);
   const selectedPrice = prices.find((price) => price.tipo === form.tipo_producto);
@@ -390,6 +440,10 @@ export default function SaleFormScreen({ navigation }) {
       subtotal: currentItemTotal,
       compra_ids: form.compra_ids,
       stock_seleccionado: selectedStockMl,
+      stock_por_compra: availablePurchases.reduce((summary, purchase) => ({
+        ...summary,
+        [purchase.id]: Number(purchase.ml_restantes) || 0,
+      }), {}),
     };
   }
 
@@ -844,9 +898,13 @@ export default function SaleFormScreen({ navigation }) {
             items={availablePurchases}
             selectedIds={form.compra_ids}
             multi
-            getLabel={(purchase) =>
-              `${purchase.ml_restantes} ml disponibles  ·  Lote: ${purchase.proveedor || 'Sin proveedor'}`
-            }
+            getLabel={(purchase) => {
+              const reservedText = purchase.ml_reservados_en_venta > 0
+                ? ` · ${purchase.ml_reservados_en_venta} ml ya apartados`
+                : '';
+
+              return `${purchase.ml_restantes} ml disponibles${reservedText}  ·  Lote: ${purchase.proveedor || 'Sin proveedor'}`;
+            }}
             emptyText="No hay compras de lotes con stock para esta fragancia."
             onSelect={togglePurchaseSelection}
           />
