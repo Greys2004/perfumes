@@ -16,6 +16,7 @@ import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import AnimatedPressable from '../components/AnimatedPressable';
 import CalendarDatePicker, { getLocalDateString } from '../components/CalendarDatePicker';
+import SearchBar from '../components/SearchBar';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenClients } from '../services/clientsService';
 import { listenActivePerfumes } from '../services/perfumesService';
@@ -82,9 +83,19 @@ function getPresentationMl(type, selectedPerfume, quantity) {
   return unitMl * quantity;
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 export default function SaleFormScreen({ navigation }) {
   const [clients, setClients] = useState([]);
   const [perfumes, setPerfumes] = useState([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [perfumeSearch, setPerfumeSearch] = useState('');
   const [prices, setPrices] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [form, setForm] = useState(() => getInitialForm());
@@ -142,6 +153,31 @@ export default function SaleFormScreen({ navigation }) {
   }, [form.perfume_id]);
 
   const selectedPerfume = perfumes.find((perfume) => perfume.id === form.perfume_id);
+  const filteredClients = useMemo(() => {
+    const searchText = normalizeText(clientSearch);
+
+    if (!searchText) {
+      return clients.slice(0, 8);
+    }
+
+    return clients.filter((client) => normalizeText(client.nombre).includes(searchText));
+  }, [clients, clientSearch]);
+  const filteredPerfumes = useMemo(() => {
+    const searchText = normalizeText(perfumeSearch);
+
+    if (!searchText) {
+      return perfumes.slice(0, 8);
+    }
+
+    return perfumes.filter((perfume) =>
+      normalizeText([
+        perfume.nombre,
+        perfume.marca,
+        perfume.descripcion_olor,
+        perfume.categoria_perfume,
+      ].join(' ')).includes(searchText)
+    );
+  }, [perfumes, perfumeSearch]);
   const availablePurchases = useMemo(
     () =>
       purchases
@@ -268,6 +304,7 @@ export default function SaleFormScreen({ navigation }) {
 
   function selectPerfume(perfume) {
     setManualStockSelection(false);
+    setPerfumeSearch(perfume.nombre || '');
     setForm((currentForm) => ({
       ...currentForm,
       perfume_id: perfume.id,
@@ -359,6 +396,7 @@ export default function SaleFormScreen({ navigation }) {
 
   function resetCurrentProductForm() {
     setManualStockSelection(false);
+    setPerfumeSearch('');
     setForm((currentForm) => ({
       ...currentForm,
       perfume_id: '',
@@ -681,12 +719,20 @@ export default function SaleFormScreen({ navigation }) {
             <Feather name="user" size={16} color={colors.gold} />
             <Text style={styles.panelTitle}>Seleccionar Cliente</Text>
           </View>
+          <SearchBar
+            value={clientSearch}
+            onChangeText={setClientSearch}
+            placeholder="Buscar cliente..."
+          />
           <OptionGrid
-            items={clients}
+            items={filteredClients}
             selectedId={form.cliente_id}
             getLabel={(client) => client.nombre}
             emptyText="Primero registra un cliente en el directorio."
-            onSelect={(client) => updateField('cliente_id', client.id)}
+            onSelect={(client) => {
+              setClientSearch(client.nombre || '');
+              updateField('cliente_id', client.id);
+            }}
           />
         </View>
 
@@ -695,8 +741,13 @@ export default function SaleFormScreen({ navigation }) {
             <Feather name="tag" size={16} color={colors.gold} />
             <Text style={styles.panelTitle}>Seleccionar Perfume</Text>
           </View>
+          <SearchBar
+            value={perfumeSearch}
+            onChangeText={setPerfumeSearch}
+            placeholder="Buscar perfume..."
+          />
           <OptionGrid
-            items={perfumes}
+            items={filteredPerfumes}
             selectedId={form.perfume_id}
             getLabel={(perfume) => `${perfume.nombre} (de ${perfume.marca || 'Marca Exclusiva'})`}
             emptyText="Primero registra un perfume en el catálogo."

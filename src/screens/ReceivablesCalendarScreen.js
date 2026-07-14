@@ -244,7 +244,7 @@ export default function ReceivablesCalendarScreen() {
 
     const products = Object.values(summary);
     return products.length
-      ? products.map((product) => `${product.nombre} · ${product.ml} ml`).join(' / ')
+      ? products.map((product) => `${product.nombre} · ${product.ml} ml`).join('\n')
       : 'Sin perfume registrado';
   }
 
@@ -1125,6 +1125,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     marginTop: 3,
+    lineHeight: 16,
   },
   amountBlock: {
     alignItems: 'flex-end',

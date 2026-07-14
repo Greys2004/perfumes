@@ -248,6 +248,9 @@ export default function PerfumeDetailScreen({ route }) {
         <View style={styles.heroInfo}>
           <Text style={styles.kicker}>{perfume.marca || 'Marca Exclusiva'}</Text>
           <Text style={styles.title}>{perfume.nombre}</Text>
+          {!!perfume.categoria_perfume && (
+            <Text style={styles.categoryText}>{perfume.categoria_perfume}</Text>
+          )}
           {!!perfume.descripcion_olor && (
             <Text style={styles.description}>{perfume.descripcion_olor}</Text>
           )}
@@ -622,6 +625,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.3,
+  },
+  categoryText: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginTop: 3,
   },
   description: {
     color: colors.textSubtle,

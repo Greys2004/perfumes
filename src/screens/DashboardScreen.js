@@ -93,6 +93,22 @@ function formatDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+function getTrendBuckets(range) {
+  const buckets = [];
+  const cursor = new Date(range.start);
+
+  while (cursor <= range.end) {
+    buckets.push({
+      date: formatDate(cursor),
+      label: String(cursor.getDate()),
+      value: 0,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return buckets;
+}
+
 function isInRange(value, range) {
   const date = normalizeDate(value);
 
@@ -184,6 +200,25 @@ export default function DashboardScreen() {
     };
   }, [data, periodRange]);
   const periodDashboard = useMemo(() => calculateDashboardData(periodData), [periodData]);
+  const salesTrend = useMemo(() => {
+    const buckets = getTrendBuckets(periodRange);
+    const bucketByDate = buckets.reduce((summary, bucket) => ({
+      ...summary,
+      [bucket.date]: bucket,
+    }), {});
+
+    periodData.sales.forEach((sale) => {
+      const date = typeof sale.fecha_venta === 'string'
+        ? sale.fecha_venta
+        : formatDate(normalizeDate(sale.fecha_venta) || new Date());
+
+      if (bucketByDate[date]) {
+        bucketByDate[date].value += Number(sale.total) || 0;
+      }
+    });
+
+    return buckets;
+  }, [periodData.sales, periodRange]);
   const maxMoney = Math.max(
     periodDashboard.totalVendido,
     periodDashboard.totalPagado,
@@ -320,6 +355,12 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.panel}>
+          <SectionHeader icon="activity" title="Graficas" detail={`Ventas y distribucion: ${periodLabel}`} />
+          <SalesTrendChart data={salesTrend} />
+          <SalesMixChart data={periodDashboard.profitabilityByType} />
+        </View>
+
+        <View style={styles.panel}>
           <SectionHeader icon="alert-triangle" title="Alerta de Inventario" detail="Perfumes críticos con menor stock" />
           {dashboard.perfumesMenosStock.length === 0 ? (
             <Text style={styles.emptyText}>No hay stock bajo registrado.</Text>
@@ -438,6 +479,70 @@ function ProfitTypeCard({ label, data }) {
       <View style={styles.rowTextGroup}>
         <Text style={styles.rowTitle}>{label}</Text>
         <Text style={styles.rowSubtext}>Vendido: ${Number(data.vendido || 0).toFixed(2)}</Text>
+      </View>
+    </View>
+  );
+}
+
+function SalesTrendChart({ data }) {
+  const maxValue = Math.max(...data.map((item) => Number(item.value) || 0), 1);
+  const visibleLabels = data.length > 12
+    ? data.filter((_, index) => index === 0 || index === data.length - 1 || index % 5 === 0)
+    : data;
+
+  return (
+    <View style={styles.chartCard}>
+      <View style={styles.chartHeader}>
+        <Text style={styles.chartTitle}>Tendencia de ventas</Text>
+        <Text style={styles.chartValue}>${data.reduce((sum, item) => sum + item.value, 0)}</Text>
+      </View>
+      <View style={styles.trendArea}>
+        {data.map((item) => {
+          const height = Math.max((Number(item.value) / maxValue) * 100, item.value > 0 ? 8 : 2);
+
+          return (
+            <View key={item.date} style={styles.trendColumn}>
+              <View style={[styles.trendBar, { height: `${height}%` }]} />
+              <View style={[styles.trendDot, item.value > 0 && styles.trendDotActive]} />
+            </View>
+          );
+        })}
+      </View>
+      <View style={styles.trendLabels}>
+        {visibleLabels.map((item) => (
+          <Text key={item.date} style={styles.trendLabel}>{item.label}</Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function SalesMixChart({ data }) {
+  const perfumeValue = Number(data.perfumes?.vendido) || 0;
+  const decantValue = Number(data.decants?.vendido) || 0;
+  const totalValue = Math.max(perfumeValue + decantValue, 1);
+  const perfumePercent = Math.round((perfumeValue / totalValue) * 100);
+  const decantPercent = Math.round((decantValue / totalValue) * 100);
+
+  return (
+    <View style={styles.chartCard}>
+      <View style={styles.chartHeader}>
+        <Text style={styles.chartTitle}>Distribucion de ventas</Text>
+        <Text style={styles.chartValue}>${perfumeValue + decantValue}</Text>
+      </View>
+      <View style={styles.mixRow}>
+        <View style={styles.circleMetric}>
+          <Text style={styles.circlePercent}>{perfumePercent}%</Text>
+          <Text style={styles.circleLabel}>Perfumes</Text>
+        </View>
+        <View style={styles.circleMetricMuted}>
+          <Text style={styles.circlePercent}>{decantPercent}%</Text>
+          <Text style={styles.circleLabel}>Decants</Text>
+        </View>
+      </View>
+      <View style={styles.stackedTrack}>
+        <View style={[styles.stackedFillGold, { flex: perfumeValue || 1 }]} />
+        <View style={[styles.stackedFillSuccess, { flex: decantValue || 1 }]} />
       </View>
     </View>
   );
@@ -816,6 +921,126 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 12,
     fontWeight: '900',
+  },
+  chartCard: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  chartTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  chartValue: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  trendArea: {
+    height: 120,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    backgroundColor: colors.background,
+    borderRadius: radius.sm - 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  trendColumn: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  trendBar: {
+    width: '72%',
+    minHeight: 2,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(229, 192, 123, 0.45)',
+  },
+  trendDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.lineStrong,
+    marginTop: 3,
+  },
+  trendDotActive: {
+    backgroundColor: colors.gold,
+  },
+  trendLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  trendLabel: {
+    color: colors.textSubtle,
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  mixRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  circleMetric: {
+    flex: 1,
+    aspectRatio: 1.65,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: 'rgba(229, 192, 123, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleMetricMuted: {
+    flex: 1,
+    aspectRatio: 1.65,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(108, 178, 143, 0.35)',
+    backgroundColor: 'rgba(108, 178, 143, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circlePercent: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  circleLabel: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+  stackedTrack: {
+    height: 10,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+  },
+  stackedFillGold: {
+    backgroundColor: colors.gold,
+  },
+  stackedFillSuccess: {
+    backgroundColor: colors.success,
   },
   stockRow: {
     minHeight: 64,

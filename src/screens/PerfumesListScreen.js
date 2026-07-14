@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,26 @@ import {
   listenInactivePerfumes,
   restorePerfume,
 } from '../services/perfumesService';
+
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function getPerfumeSearchText(perfume) {
+  return normalizeText([
+    perfume.nombre,
+    perfume.marca,
+    perfume.descripcion_olor,
+    perfume.categoria_perfume,
+    perfume.notas_salida,
+    perfume.notas_corazon,
+    perfume.notas_fondo,
+  ].join(' '));
+}
 
 export default function PerfumesListScreen({ navigation }) {
   const [perfumes, setPerfumes] = useState([]);
@@ -50,18 +70,23 @@ export default function PerfumesListScreen({ navigation }) {
     };
   }, []);
 
-  const searchText = search.toLowerCase();
-  const filteredPerfumes = perfumes.filter((perfume) => {
-    const searchableText = [
-      perfume.nombre,
-      perfume.marca,
-      perfume.descripcion_olor,
-    ]
-      .join(' ')
-      .toLowerCase();
+  const searchText = normalizeText(search);
+  const filteredPerfumes = useMemo(() => {
+    if (!searchText) {
+      return perfumes;
+    }
 
-    return searchableText.includes(searchText);
-  });
+    return perfumes.filter((perfume) => getPerfumeSearchText(perfume).includes(searchText));
+  }, [perfumes, searchText]);
+  const suggestions = useMemo(() => {
+    if (!searchText) {
+      return [];
+    }
+
+    return perfumes
+      .filter((perfume) => getPerfumeSearchText(perfume).includes(searchText))
+      .slice(0, 6);
+  }, [perfumes, searchText]);
 
   return (
     <View style={styles.container}>
@@ -84,6 +109,21 @@ export default function PerfumesListScreen({ navigation }) {
         onChangeText={setSearch}
         placeholder="Buscar perfume..."
       />
+
+      {suggestions.length > 0 && (
+        <View style={styles.suggestionsWrap}>
+          {suggestions.map((perfume) => (
+            <Pressable
+              key={perfume.id}
+              onPress={() => setSearch(perfume.nombre)}
+              style={styles.suggestionPill}
+            >
+              <Feather name="corner-down-right" size={12} color={colors.gold} />
+              <Text style={styles.suggestionText}>{perfume.nombre}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
 
@@ -198,6 +238,9 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
         <View style={styles.cardInfo}>
           <Text style={styles.cardTitle}>{perfume.nombre}</Text>
           <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
+          {!!perfume.categoria_perfume && (
+            <Text style={styles.cardCategory}>{perfume.categoria_perfume}</Text>
+          )}
         </View>
         <Feather name="chevron-right" size={18} color={colors.textSubtle} />
       </View>
@@ -295,6 +338,29 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 32,
   },
+  suggestionsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  suggestionPill: {
+    minHeight: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+  },
+  suggestionText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -358,6 +424,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
+  },
+  cardCategory: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 3,
+    textTransform: 'uppercase',
   },
   description: {
     color: colors.textSubtle,
