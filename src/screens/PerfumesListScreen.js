@@ -41,6 +41,18 @@ function getPerfumeSearchText(perfume) {
   ].join(' '));
 }
 
+function getSuggestionDetail(perfume, searchText) {
+  if (normalizeText(perfume.marca).includes(searchText)) {
+    return `Marca: ${perfume.marca}`;
+  }
+
+  if (normalizeText(perfume.categoria_perfume).includes(searchText)) {
+    return `Tipo: ${perfume.categoria_perfume}`;
+  }
+
+  return perfume.marca || perfume.categoria_perfume || 'Perfume';
+}
+
 export default function PerfumesListScreen({ navigation }) {
   const [perfumes, setPerfumes] = useState([]);
   const [inactivePerfumes, setInactivePerfumes] = useState([]);
@@ -119,7 +131,10 @@ export default function PerfumesListScreen({ navigation }) {
               style={styles.suggestionPill}
             >
               <Feather name="corner-down-right" size={12} color={colors.gold} />
-              <Text style={styles.suggestionText}>{perfume.nombre}</Text>
+              <View>
+                <Text style={styles.suggestionText}>{perfume.nombre}</Text>
+                <Text style={styles.suggestionDetail}>{getSuggestionDetail(perfume, searchText)}</Text>
+              </View>
             </Pressable>
           ))}
         </View>
@@ -346,7 +361,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   suggestionPill: {
-    minHeight: 32,
+    minHeight: 42,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
@@ -359,7 +374,13 @@ const styles = StyleSheet.create({
   suggestionText: {
     color: colors.text,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+  suggestionDetail: {
+    color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 1,
   },
   emptyContainer: {
     alignItems: 'center',

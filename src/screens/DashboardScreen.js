@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { colors, radius, spacing, shadow } from '../theme';
 import AnimatedPressable from '../components/AnimatedPressable';
+import CalendarDatePicker from '../components/CalendarDatePicker';
 import {
   calculateDashboardData,
   listenCollection,
@@ -294,6 +295,14 @@ export default function DashboardScreen() {
             >
               <Feather name="chevron-right" size={16} color={colors.text} />
             </Pressable>
+          </View>
+
+          <View style={styles.directDateBox}>
+            <CalendarDatePicker
+              label="Ir directo a fecha"
+              value={formatDate(periodAnchor)}
+              onChange={(value) => setPeriodAnchor(new Date(`${value}T00:00:00`))}
+            />
           </View>
 
           <View style={styles.heroMain}>
@@ -730,6 +739,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
     textAlign: 'center',
+  },
+  directDateBox: {
+    marginBottom: spacing.md,
   },
   heroMain: {
     marginBottom: spacing.md,
