@@ -94,22 +94,6 @@ function formatDate(date) {
   return `${year}-${month}-${day}`;
 }
 
-function getTrendBuckets(range) {
-  const buckets = [];
-  const cursor = new Date(range.start);
-
-  while (cursor <= range.end) {
-    buckets.push({
-      date: formatDate(cursor),
-      label: String(cursor.getDate()),
-      value: 0,
-    });
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  return buckets;
-}
-
 function isInRange(value, range) {
   const date = normalizeDate(value);
 
@@ -133,6 +117,44 @@ function getPeriodLabel(period, range) {
     month: 'long',
     year: 'numeric',
   });
+}
+
+const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function getYearlySalesByMonth(data, year) {
+  const salesById = data.sales.reduce((summary, sale) => ({
+    ...summary,
+    [sale.id]: sale,
+  }), {});
+
+  const months = monthLabels.map((label, index) => ({
+    label,
+    month: index,
+    perfumes: 0,
+    decants: 0,
+  }));
+
+  data.saleDetails.forEach((detail) => {
+    const sale = salesById[detail.venta_id];
+
+    if (!sale || sale.estado_pago === 'cancelada') {
+      return;
+    }
+
+    const saleDate = normalizeDate(sale.fecha_venta);
+
+    if (!saleDate || saleDate.getFullYear() !== year) {
+      return;
+    }
+
+    const type = detail.tipo_producto === 'botella_completa' ? 'perfumes' : 'decants';
+    months[saleDate.getMonth()][type] += Number(detail.subtotal) || 0;
+  });
+
+  return months.map((month) => ({
+    ...month,
+    total: month.perfumes + month.decants,
+  }));
 }
 
 function getPeriodPickerCopy(period) {
@@ -223,26 +245,13 @@ export default function DashboardScreen() {
     };
   }, [data, periodRange]);
   const periodDashboard = useMemo(() => calculateDashboardData(periodData), [periodData]);
-  const salesTrend = useMemo(() => {
-    const buckets = getTrendBuckets(periodRange);
-    const bucketByDate = buckets.reduce((summary, bucket) => ({
-      ...summary,
-      [bucket.date]: bucket,
-    }), {});
-
-    periodData.sales.forEach((sale) => {
-      const date = typeof sale.fecha_venta === 'string'
-        ? sale.fecha_venta
-        : formatDate(normalizeDate(sale.fecha_venta) || new Date());
-
-      if (bucketByDate[date]) {
-        bucketByDate[date].value += Number(sale.total) || 0;
-      }
-    });
-
-    return buckets;
-  }, [periodData.sales, periodRange]);
+  const selectedYear = periodAnchor.getFullYear();
+  const yearlySalesByMonth = useMemo(
+    () => getYearlySalesByMonth(data, selectedYear),
+    [data, selectedYear]
+  );
   const maxMoney = Math.max(
+    periodDashboard.totalGastado,
     periodDashboard.totalVendido,
     periodDashboard.totalPagado,
     periodDashboard.deudaClientes,
@@ -372,6 +381,7 @@ export default function DashboardScreen() {
 
         <View style={styles.panel}>
           <SectionHeader icon="map" title="Mapa del Periodo" detail={`Cifras de rendimiento: ${periodLabel}`} />
+          <MoneyBar label="Gastado" value={periodDashboard.totalGastado} maxValue={maxMoney} color={colors.danger} />
           <MoneyBar label="Vendido" value={periodDashboard.totalVendido} maxValue={maxMoney} color={colors.text} />
           <MoneyBar label="Cobrado" value={periodDashboard.totalPagado} maxValue={maxMoney} color={colors.success} />
           <MoneyBar label="Deuda de Clientes" value={periodDashboard.deudaClientes} maxValue={maxMoney} color={colors.gold} muted />
@@ -387,8 +397,8 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.panel}>
-          <SectionHeader icon="activity" title="Graficas" detail={`Ventas y distribucion: ${periodLabel}`} />
-          <SalesTrendChart data={salesTrend} />
+          <SectionHeader icon="activity" title="Graficas" detail={`Ventas por mes: ${selectedYear}`} />
+          <YearlySalesChart data={yearlySalesByMonth} year={selectedYear} />
           <SalesMixChart data={periodDashboard.profitabilityByType} />
         </View>
 
@@ -516,34 +526,60 @@ function ProfitTypeCard({ label, data }) {
   );
 }
 
-function SalesTrendChart({ data }) {
-  const maxValue = Math.max(...data.map((item) => Number(item.value) || 0), 1);
-  const visibleLabels = data.length > 12
-    ? data.filter((_, index) => index === 0 || index === data.length - 1 || index % 5 === 0)
-    : data;
+function YearlySalesChart({ data, year }) {
+  const totals = data.reduce(
+    (summary, item) => ({
+      perfumes: summary.perfumes + item.perfumes,
+      decants: summary.decants + item.decants,
+      total: summary.total + item.total,
+    }),
+    { perfumes: 0, decants: 0, total: 0 }
+  );
+  const maxValue = Math.max(...data.map((item) => item.total), 1);
 
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
-        <Text style={styles.chartTitle}>Tendencia de ventas</Text>
-        <Text style={styles.chartValue}>${data.reduce((sum, item) => sum + item.value, 0)}</Text>
+        <View>
+          <Text style={styles.chartTitle}>Ventas mensuales {year}</Text>
+          <Text style={styles.chartSubtitle}>
+            Perfumes ${totals.perfumes.toFixed(2)} · Decants ${totals.decants.toFixed(2)}
+          </Text>
+        </View>
+        <Text style={styles.chartValue}>${totals.total.toFixed(2)}</Text>
       </View>
-      <View style={styles.trendArea}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.yearBarScrollContent}
+      >
         {data.map((item) => {
-          const height = Math.max((Number(item.value) / maxValue) * 100, item.value > 0 ? 8 : 2);
+          const perfumeHeight = Math.max((item.perfumes / maxValue) * 104, item.perfumes > 0 ? 5 : 0);
+          const decantHeight = Math.max((item.decants / maxValue) * 104, item.decants > 0 ? 5 : 0);
 
           return (
-            <View key={item.date} style={styles.trendColumn}>
-              <View style={[styles.trendBar, { height: `${height}%` }]} />
-              <View style={[styles.trendDot, item.value > 0 && styles.trendDotActive]} />
+            <View key={item.label} style={styles.yearBarMonth}>
+              <View style={styles.yearBarPlot}>
+                <View style={styles.yearBarPair}>
+                  <View style={[styles.yearBarPerfume, { height: perfumeHeight }]} />
+                  <View style={[styles.yearBarDecant, { height: decantHeight }]} />
+                </View>
+              </View>
+              <Text style={styles.yearBarLabel}>{item.label}</Text>
+              <Text style={styles.yearBarValue}>${item.total.toFixed(0)}</Text>
             </View>
           );
         })}
-      </View>
-      <View style={styles.trendLabels}>
-        {visibleLabels.map((item) => (
-          <Text key={item.date} style={styles.trendLabel}>{item.label}</Text>
-        ))}
+      </ScrollView>
+      <View style={styles.chartLegendRow}>
+        <View style={styles.chartLegendItem}>
+          <View style={styles.legendPerfume} />
+          <Text style={styles.chartLegendText}>Perfumes</Text>
+        </View>
+        <View style={styles.chartLegendItem}>
+          <View style={styles.legendDecant} />
+          <Text style={styles.chartLegendText}>Decants</Text>
+        </View>
       </View>
     </View>
   );
@@ -985,54 +1021,93 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
+  chartSubtitle: {
+    color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 2,
+  },
   chartValue: {
     color: colors.gold,
     fontSize: 13,
     fontWeight: '900',
   },
-  trendArea: {
-    height: 120,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 3,
-    backgroundColor: colors.background,
+  yearBarScrollContent: {
+    gap: 8,
+    paddingRight: spacing.sm,
+  },
+  yearBarMonth: {
+    width: 54,
+    alignItems: 'center',
+  },
+  yearBarPlot: {
+    width: '100%',
+    height: 126,
     borderRadius: radius.sm - 2,
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.line,
-    paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  trendColumn: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
     justifyContent: 'flex-end',
+    paddingHorizontal: 9,
+    paddingBottom: 8,
   },
-  trendBar: {
-    width: '72%',
-    minHeight: 2,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(229, 192, 123, 0.45)',
+  yearBarPair: {
+    height: 108,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 4,
   },
-  trendDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.lineStrong,
-    marginTop: 3,
-  },
-  trendDotActive: {
+  yearBarPerfume: {
+    width: 12,
+    borderTopLeftRadius: radius.pill,
+    borderTopRightRadius: radius.pill,
     backgroundColor: colors.gold,
   },
-  trendLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
+  yearBarDecant: {
+    width: 12,
+    borderTopLeftRadius: radius.pill,
+    borderTopRightRadius: radius.pill,
+    backgroundColor: colors.success,
   },
-  trendLabel: {
+  yearBarLabel: {
     color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 5,
+  },
+  yearBarValue: {
+    color: colors.textMuted,
     fontSize: 9,
+    fontWeight: '700',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  chartLegendRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  chartLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendPerfume: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.gold,
+  },
+  legendDecant: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.success,
+  },
+  chartLegendText: {
+    color: colors.textSubtle,
+    fontSize: 11,
     fontWeight: '800',
   },
   mixRow: {
