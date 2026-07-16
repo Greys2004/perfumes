@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   optionActive: {
-    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+    backgroundColor: 'rgba(166, 136, 100, 0.1)',
     borderColor: colors.gold,
   },
   optionContent: {
@@ -1594,15 +1594,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   planStatusBox: {
-    backgroundColor: 'rgba(229, 192, 123, 0.1)',
+    backgroundColor: 'rgba(166, 136, 100, 0.12)',
     borderColor: colors.lineStrong,
     borderWidth: 1,
     borderRadius: radius.sm,
     padding: spacing.sm,
   },
   planStatusSuccess: {
-    backgroundColor: 'rgba(108, 178, 143, 0.12)',
-    borderColor: 'rgba(108, 178, 143, 0.35)',
+    backgroundColor: 'rgba(9, 144, 225, 0.12)',
+    borderColor: 'rgba(9, 144, 225, 0.35)',
   },
   planStatusDanger: {
     backgroundColor: colors.dangerSurface,
@@ -1638,7 +1638,7 @@ const styles = StyleSheet.create({
   },
   promisePillActive: {
     borderColor: colors.gold,
-    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+    backgroundColor: 'rgba(166, 136, 100, 0.1)',
   },
   promisePillDate: {
     color: colors.text,

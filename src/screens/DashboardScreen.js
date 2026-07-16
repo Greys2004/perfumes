@@ -381,13 +381,13 @@ export default function DashboardScreen() {
 
         <View style={styles.panel}>
           <SectionHeader icon="map" title="Mapa del Periodo" detail={`Cifras de rendimiento: ${periodLabel}`} />
-          <MoneyBar label="Gastado" value={periodDashboard.totalGastado} maxValue={maxMoney} color={colors.danger} />
-          <MoneyBar label="Vendido" value={periodDashboard.totalVendido} maxValue={maxMoney} color={colors.text} />
-          <MoneyBar label="Cobrado" value={periodDashboard.totalPagado} maxValue={maxMoney} color={colors.success} />
-          <MoneyBar label="Deuda de Clientes" value={periodDashboard.deudaClientes} maxValue={maxMoney} color={colors.gold} muted />
-          <MoneyBar label="Ganancia Estimada (Ventas)" value={periodDashboard.gananciaVendida} maxValue={maxMoney} color={colors.gold} />
-          <MoneyBar label="Ganancia Real (Cobrado)" value={periodDashboard.gananciaCobrada} maxValue={maxMoney} color={colors.success} muted />
-          <MoneyBar label="Diferencia Gastado/Cobrado" value={periodDashboard.gastadoMenosPagado} maxValue={maxMoney} color={colors.danger} muted />
+          <MoneyBar label="Gastado" value={periodDashboard.totalGastado} maxValue={maxMoney} color={colors.gold} />
+          <MoneyBar label="Vendido" value={periodDashboard.totalVendido} maxValue={maxMoney} color={colors.gold} />
+          <MoneyBar label="Cobrado" value={periodDashboard.totalPagado} maxValue={maxMoney} color={colors.gold} />
+          <MoneyBar label="Deuda de Clientes" value={periodDashboard.deudaClientes} maxValue={maxMoney} tone="debt" muted />
+          <MoneyBar label="Ganancia Estimada (Ventas)" value={periodDashboard.gananciaVendida} maxValue={maxMoney} tone="positiveGood" />
+          <MoneyBar label="Ganancia Real (Cobrado)" value={periodDashboard.gananciaCobrada} maxValue={maxMoney} tone="positiveGood" muted />
+          <MoneyBar label="Diferencia Gastado/Cobrado" value={periodDashboard.gastadoMenosPagado} maxValue={maxMoney} tone="negativeGood" muted />
         </View>
 
         <View style={styles.panel}>
@@ -484,17 +484,36 @@ function DashboardMetricCard({ icon, label, value, color, focus = false }) {
   );
 }
 
-function MoneyBar({ label, value, maxValue, color, muted = false }) {
+function getMoneyToneColor(value, tone, fallbackColor) {
+  const numericValue = Number(value) || 0;
+
+  if (tone === 'debt') {
+    return numericValue > 0 ? colors.danger : colors.success;
+  }
+
+  if (tone === 'negativeGood') {
+    return numericValue > 0 ? colors.danger : colors.success;
+  }
+
+  if (tone === 'positiveGood') {
+    return numericValue < 0 ? colors.danger : colors.success;
+  }
+
+  return numericValue < 0 ? colors.danger : fallbackColor;
+}
+
+function MoneyBar({ label, value, maxValue, color = colors.gold, tone = 'fixed', muted = false }) {
   const numericValue = Number(value) || 0;
   const isNegative = numericValue < 0;
   const safeValue = Math.abs(numericValue);
   const width = `${Math.min((safeValue / Math.max(maxValue, 1)) * 100, 100)}%`;
+  const toneColor = getMoneyToneColor(numericValue, tone, color);
 
   return (
     <View style={styles.moneyRow}>
       <View style={styles.moneyTop}>
         <Text style={styles.moneyLabel}>{label}</Text>
-        <Text style={[styles.moneyValue, isNegative && styles.negativeValue, { color: isNegative ? colors.danger : color }]}>
+        <Text style={[styles.moneyValue, isNegative && styles.negativeValue, { color: toneColor }]}>
           ${value}
         </Text>
       </View>
@@ -502,7 +521,7 @@ function MoneyBar({ label, value, maxValue, color, muted = false }) {
         <View
           style={[
             styles.moneyFill,
-            { backgroundColor: isNegative ? colors.danger : color },
+            { backgroundColor: toneColor },
             muted && { opacity: 0.5 },
             { width },
           ]}
@@ -1121,7 +1140,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.lineStrong,
-    backgroundColor: 'rgba(229, 192, 123, 0.12)',
+    backgroundColor: 'rgba(166, 136, 100, 0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1130,8 +1149,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1.65,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(108, 178, 143, 0.35)',
-    backgroundColor: 'rgba(108, 178, 143, 0.12)',
+    borderColor: 'rgba(9, 144, 225, 0.35)',
+    backgroundColor: 'rgba(9, 144, 225, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -60,7 +60,7 @@ function getMonthGrid(dateString) {
 }
 
 function getStatusColor(status) {
-  return status === 'pendiente' ? colors.danger : colors.gold;
+  return status === 'pagado' || status === 'liquidado' ? colors.success : colors.danger;
 }
 
 function normalizeSalePromises(sale, remaining) {
