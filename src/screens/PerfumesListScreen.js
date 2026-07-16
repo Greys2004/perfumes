@@ -36,6 +36,7 @@ function getPerfumeSearchText(perfume) {
     perfume.marca,
     perfume.descripcion_olor,
     perfume.categoria_perfume,
+    perfume.genero_perfume,
     perfume.notas_salida,
     perfume.notas_corazon,
     perfume.notas_fondo,
@@ -51,6 +52,10 @@ function getSuggestionDetail(perfume, searchText) {
     return `Tipo: ${perfume.categoria_perfume}`;
   }
 
+  if (normalizeText(perfume.genero_perfume).includes(searchText)) {
+    return `Genero: ${perfume.genero_perfume}`;
+  }
+
   return perfume.marca || perfume.categoria_perfume || 'Perfume';
 }
 
@@ -61,12 +66,20 @@ const typeFilters = [
   { label: 'Arabe', value: 'arabe' },
 ];
 
+const genderFilters = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Mujer', value: 'mujer' },
+  { label: 'Hombre', value: 'hombre' },
+  { label: 'Unisex', value: 'unisex' },
+];
+
 export default function PerfumesListScreen({ navigation }) {
   const [perfumes, setPerfumes] = useState([]);
   const [inactivePerfumes, setInactivePerfumes] = useState([]);
   const [search, setSearch] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedType, setSelectedType] = useState('all');
+  const [selectedGender, setSelectedGender] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [brandSearch, setBrandSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -99,11 +112,12 @@ export default function PerfumesListScreen({ navigation }) {
     return perfumes.filter((perfume) => {
       const matchesSearch = !searchText || getPerfumeSearchText(perfume).includes(searchText);
       const matchesType = selectedType === 'all' || perfume.categoria_perfume === selectedType;
+      const matchesGender = selectedGender === 'all' || perfume.genero_perfume === selectedGender;
       const matchesBrand = selectedBrand === 'all' || perfume.marca === selectedBrand;
 
-      return matchesSearch && matchesType && matchesBrand;
+      return matchesSearch && matchesType && matchesGender && matchesBrand;
     });
-  }, [perfumes, searchText, selectedBrand, selectedType]);
+  }, [perfumes, searchText, selectedBrand, selectedGender, selectedType]);
   const availableBrands = useMemo(() => {
     const brands = [...new Set(perfumes.map((perfume) => perfume.marca).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
@@ -117,6 +131,7 @@ export default function PerfumesListScreen({ navigation }) {
   }, [brandSearch, perfumes]);
   const activeFiltersCount = [
     selectedType !== 'all',
+    selectedGender !== 'all',
     selectedBrand !== 'all',
   ].filter(Boolean).length;
   const suggestions = useMemo(() => {
@@ -185,6 +200,25 @@ export default function PerfumesListScreen({ navigation }) {
             })}
           </ScrollView>
 
+          <Text style={styles.filterLabel}>Genero</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+            {genderFilters.map((filter) => {
+              const selected = selectedGender === filter.value;
+
+              return (
+                <Pressable
+                  key={filter.value}
+                  onPress={() => setSelectedGender(filter.value)}
+                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                    {filter.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
           <Text style={styles.filterLabel}>Marca</Text>
           <SearchBar
             value={brandSearch}
@@ -221,6 +255,7 @@ export default function PerfumesListScreen({ navigation }) {
             <Pressable
               onPress={() => {
                 setSelectedType('all');
+                setSelectedGender('all');
                 setSelectedBrand('all');
                 setBrandSearch('');
               }}
@@ -366,6 +401,9 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
           <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
           {!!perfume.categoria_perfume && (
             <Text style={styles.cardCategory}>{perfume.categoria_perfume}</Text>
+          )}
+          {!!perfume.genero_perfume && (
+            <Text style={styles.cardCategory}>{perfume.genero_perfume}</Text>
           )}
         </View>
         <Feather name="chevron-right" size={18} color={colors.textSubtle} />

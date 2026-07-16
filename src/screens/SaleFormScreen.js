@@ -212,6 +212,7 @@ export default function SaleFormScreen({ navigation }) {
         perfume.marca,
         perfume.descripcion_olor,
         perfume.categoria_perfume,
+        perfume.genero_perfume,
       ].join(' ')).includes(searchText)
     );
   }, [perfumes, perfumeSearch]);

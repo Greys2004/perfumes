@@ -251,6 +251,9 @@ export default function PerfumeDetailScreen({ route }) {
           {!!perfume.categoria_perfume && (
             <Text style={styles.categoryText}>{perfume.categoria_perfume}</Text>
           )}
+          {!!perfume.genero_perfume && (
+            <Text style={styles.categoryText}>{perfume.genero_perfume}</Text>
+          )}
           {!!perfume.descripcion_olor && (
             <Text style={styles.description}>{perfume.descripcion_olor}</Text>
           )}

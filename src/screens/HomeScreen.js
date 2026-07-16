@@ -31,6 +31,13 @@ const perfumeTypeFilters = [
   { label: 'Arabe', value: 'arabe' },
 ];
 
+const perfumeGenderFilters = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Mujer', value: 'mujer' },
+  { label: 'Hombre', value: 'hombre' },
+  { label: 'Unisex', value: 'unisex' },
+];
+
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFD')
@@ -44,6 +51,7 @@ export default function HomeScreen() {
   const [prices, setPrices] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('all');
+  const [selectedGender, setSelectedGender] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [brandSearch, setBrandSearch] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -82,17 +90,19 @@ export default function HomeScreen() {
         perfume.marca,
         perfume.descripcion_olor,
         perfume.categoria_perfume,
+        perfume.genero_perfume,
         perfume.notas_salida,
         perfume.notas_corazon,
         perfume.notas_fondo,
       ].join(' '));
       const matchesSearch = !searchText || searchableText.includes(searchText);
       const matchesType = selectedType === 'all' || perfume.categoria_perfume === selectedType;
+      const matchesGender = selectedGender === 'all' || perfume.genero_perfume === selectedGender;
       const matchesBrand = selectedBrand === 'all' || perfume.marca === selectedBrand;
 
-      return matchesSearch && matchesType && matchesBrand;
+      return matchesSearch && matchesType && matchesGender && matchesBrand;
     });
-  }, [perfumes, searchText, selectedBrand, selectedType]);
+  }, [perfumes, searchText, selectedBrand, selectedGender, selectedType]);
   const availableBrands = useMemo(() => {
     const brands = [...new Set(perfumes.map((perfume) => perfume.marca).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
@@ -106,6 +116,7 @@ export default function HomeScreen() {
   }, [brandSearch, perfumes]);
   const activeFiltersCount = [
     selectedType !== 'all',
+    selectedGender !== 'all',
     selectedBrand !== 'all',
   ].filter(Boolean).length;
 
@@ -135,7 +146,7 @@ export default function HomeScreen() {
       <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por aroma, marca, tipo o nombre..."
+        placeholder="Buscar por aroma, marca, tipo, genero o nombre..."
       />
 
       <Pressable onPress={() => setFiltersOpen((open) => !open)} style={styles.filterToggle}>
@@ -162,6 +173,25 @@ export default function HomeScreen() {
                 <Pressable
                   key={filter.value}
                   onPress={() => setSelectedType(filter.value)}
+                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                    {filter.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <Text style={styles.filterLabel}>Genero</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+            {perfumeGenderFilters.map((filter) => {
+              const selected = selectedGender === filter.value;
+
+              return (
+                <Pressable
+                  key={filter.value}
+                  onPress={() => setSelectedGender(filter.value)}
                   style={[styles.filterChip, selected && styles.filterChipActive]}
                 >
                   <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
@@ -208,6 +238,7 @@ export default function HomeScreen() {
             <Pressable
               onPress={() => {
                 setSelectedType('all');
+                setSelectedGender('all');
                 setSelectedBrand('all');
                 setBrandSearch('');
               }}
@@ -257,6 +288,9 @@ export default function HomeScreen() {
                 <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
                 {!!perfume.categoria_perfume && (
                   <Text style={styles.cardCategory}>{perfume.categoria_perfume}</Text>
+                )}
+                {!!perfume.genero_perfume && (
+                  <Text style={styles.cardCategory}>{perfume.genero_perfume}</Text>
                 )}
                 {!!perfume.duracion && (
                   <View style={styles.duracionRow}>

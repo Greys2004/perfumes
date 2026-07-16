@@ -25,6 +25,7 @@ const initialForm = {
   imagen: '',
   descripcion_olor: '',
   categoria_perfume: 'diseñador',
+  genero_perfume: 'unisex',
   duracion: '',
   ml_botella_completa: '',
   precio_liverpool: '',
@@ -39,6 +40,12 @@ const perfumeCategories = [
   { label: 'Arabe', value: 'arabe' },
 ];
 
+const perfumeGenders = [
+  { label: 'Mujer', value: 'mujer' },
+  { label: 'Hombre', value: 'hombre' },
+  { label: 'Unisex', value: 'unisex' },
+];
+
 function getInitialForm(perfume) {
   if (!perfume) {
     return initialForm;
@@ -50,6 +57,7 @@ function getInitialForm(perfume) {
     imagen: perfume.imagen || '',
     descripcion_olor: perfume.descripcion_olor || '',
     categoria_perfume: perfume.categoria_perfume || 'diseñador',
+    genero_perfume: perfume.genero_perfume || 'unisex',
     duracion: perfume.duracion || '',
     ml_botella_completa: String(perfume.ml_botella_completa || ''),
     precio_liverpool: String(perfume.precio_liverpool || ''),
@@ -201,6 +209,25 @@ export default function PerfumeFormScreen({ navigation, route }) {
                 >
                   <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
                     {category.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.fieldLabel}>Genero</Text>
+          <View style={styles.segmentRow}>
+            {perfumeGenders.map((gender) => {
+              const selected = form.genero_perfume === gender.value;
+
+              return (
+                <Pressable
+                  key={gender.value}
+                  onPress={() => updateField('genero_perfume', gender.value)}
+                  style={[styles.segment, selected && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                    {gender.label}
                   </Text>
                 </Pressable>
               );

@@ -18,11 +18,16 @@ export default {
       firebaseMeasurementId: process.env.FIREBASE_MEASUREMENT_ID,
       cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
       cloudinaryUploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
+
+      eas: {
+        projectId: "90b3687d-497f-4802-adbc-c4227f7f3476",
+      },
     },
     ios: {
       supportsTablet: true
     },
     android: {
+      package: "com.perfumesaroma.perfumes",
       adaptiveIcon: {
         backgroundColor: "#090A0D",
         foregroundImage: "./assets/android-icon-foreground.png",
