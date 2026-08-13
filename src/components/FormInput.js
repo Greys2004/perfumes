@@ -10,29 +10,42 @@ export default function FormInput({
   multiline = false,
   keyboardType = 'default',
   editable = true,
+  secureTextEntry = false,
+  autoCapitalize,
+  autoCorrect,
+  textContentType,
+  rightElement,
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSubtle}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        editable={editable}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        style={[
-          styles.input,
-          multiline && styles.multiline,
-          isFocused && styles.focusedInput,
-          !editable && styles.disabledInput,
-        ]}
-      />
+      <View style={styles.inputWrap}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textSubtle}
+          multiline={multiline}
+          keyboardType={keyboardType}
+          editable={editable}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          textContentType={textContentType}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          style={[
+            styles.input,
+            rightElement && styles.inputWithRightElement,
+            multiline && styles.multiline,
+            isFocused && styles.focusedInput,
+            !editable && styles.disabledInput,
+          ]}
+        />
+        {rightElement ? <View style={styles.rightElement}>{rightElement}</View> : null}
+      </View>
     </View>
   );
 }
@@ -49,6 +62,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  inputWrap: {
+    position: 'relative',
+  },
   input: {
     minHeight: 48,
     borderRadius: radius.sm,
@@ -58,6 +74,18 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     paddingHorizontal: spacing.md,
+  },
+  inputWithRightElement: {
+    paddingRight: 52,
+  },
+  rightElement: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 52,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   focusedInput: {
     borderColor: colors.gold,

@@ -1,4 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'react-native';
 
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -6,7 +6,7 @@ export default function App() {
   return (
     <>
       <AppNavigator />
-      <StatusBar style="light" />
+      <StatusBar barStyle="light-content" />
     </>
   );
 }

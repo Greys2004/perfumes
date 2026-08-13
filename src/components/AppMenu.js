@@ -1,11 +1,12 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+
 import AnimatedPressable from './AnimatedPressable';
 import { colors, radius, spacing } from '../theme';
 
 const menuItems = [
   { label: 'Inicio', routeName: 'Home', icon: 'home' },
-  { label: 'Catálogo', routeName: 'PerfumesList', icon: 'tag' },
+  { label: 'Catalogo', routeName: 'PerfumesList', icon: 'tag' },
   { label: 'Clientes', routeName: 'ClientsList', icon: 'users' },
   { label: 'Nueva Venta', routeName: 'SaleForm', icon: 'shopping-cart' },
   { label: 'Pagos', routeName: 'Payments', icon: 'credit-card' },
@@ -13,7 +14,7 @@ const menuItems = [
   { label: 'Dashboard', routeName: 'Dashboard', icon: 'pie-chart' },
 ];
 
-export default function AppMenu({ visible, onClose, onNavigate }) {
+export default function AppMenu({ visible, onClose, onNavigate, onLogout }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -21,11 +22,11 @@ export default function AppMenu({ visible, onClose, onNavigate }) {
         <View style={styles.drawer}>
           <View style={styles.brandBlock}>
             <View style={styles.brandHeader}>
-              <Feather name="activity" size={20} color={colors.gold} />
+              <Image source={require('../../assets/icon.png')} style={styles.logo} />
               <Text style={styles.kicker}>Admin Panel</Text>
             </View>
             <Text style={styles.title}>AromaOrigen</Text>
-            <Text style={styles.subtitle}>Gestión de Perfumes & Clientes</Text>
+            <Text style={styles.subtitle}>Gestion de Perfumes & Clientes</Text>
           </View>
 
           <View style={styles.group}>
@@ -45,9 +46,16 @@ export default function AppMenu({ visible, onClose, onNavigate }) {
           </View>
 
           <View style={styles.footerNote}>
-            <Text style={styles.sectionLabel}>Nota de navegación</Text>
+            <AnimatedPressable onPress={onLogout} style={styles.logoutButton}>
+              <View style={styles.logoutIcon}>
+                <Feather name="log-out" size={16} color={colors.danger} />
+              </View>
+              <Text style={styles.logoutText}>Cerrar sesion</Text>
+            </AnimatedPressable>
+
+            <Text style={styles.sectionLabel}>Nota de navegacion</Text>
             <Text style={styles.footerText}>
-              "Inicio" es la vista pública del catálogo de perfumes. Las demás opciones son administrativas internas.
+              "Inicio" es la vista publica del catalogo de perfumes. Las demas opciones son administrativas internas.
             </Text>
           </View>
         </View>
@@ -84,8 +92,14 @@ const styles = StyleSheet.create({
   brandHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 8,
+  },
+  logo: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.sm,
+    backgroundColor: colors.background,
   },
   kicker: {
     color: colors.gold,
@@ -98,7 +112,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 24,
     fontWeight: '900',
-    letterSpacing: -0.2,
     marginBottom: 2,
   },
   subtitle: {
@@ -144,6 +157,32 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     marginTop: 'auto',
     marginBottom: 24,
+  },
+  logoutButton: {
+    minHeight: 48,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
+    backgroundColor: colors.dangerSurface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  logoutIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  logoutText: {
+    color: colors.danger,
+    fontSize: 15,
+    fontWeight: '900',
+    flex: 1,
   },
   sectionLabel: {
     color: colors.gold,
