@@ -24,6 +24,8 @@ const initialForm = {
   marca: '',
   imagen: '',
   descripcion_olor: '',
+  categoria_perfume: 'diseñador',
+  genero_perfume: 'unisex',
   duracion: '',
   ml_botella_completa: '',
   precio_liverpool: '',
@@ -31,6 +33,18 @@ const initialForm = {
   notas_corazon: '',
   notas_fondo: '',
 };
+
+const perfumeCategories = [
+  { label: 'Diseñador', value: 'diseñador' },
+  { label: 'Nicho', value: 'nicho' },
+  { label: 'Arabe', value: 'arabe' },
+];
+
+const perfumeGenders = [
+  { label: 'Mujer', value: 'mujer' },
+  { label: 'Hombre', value: 'hombre' },
+  { label: 'Unisex', value: 'unisex' },
+];
 
 function getInitialForm(perfume) {
   if (!perfume) {
@@ -42,6 +56,8 @@ function getInitialForm(perfume) {
     marca: perfume.marca || '',
     imagen: perfume.imagen || '',
     descripcion_olor: perfume.descripcion_olor || '',
+    categoria_perfume: perfume.categoria_perfume || 'diseñador',
+    genero_perfume: perfume.genero_perfume || 'unisex',
     duracion: perfume.duracion || '',
     ml_botella_completa: String(perfume.ml_botella_completa || ''),
     precio_liverpool: String(perfume.precio_liverpool || ''),
@@ -179,6 +195,44 @@ export default function PerfumeFormScreen({ navigation, route }) {
             onChangeText={(value) => updateField('marca', value)}
             placeholder="Ej. Dior"
           />
+
+          <Text style={styles.fieldLabel}>Tipo de perfume</Text>
+          <View style={styles.segmentRow}>
+            {perfumeCategories.map((category) => {
+              const selected = form.categoria_perfume === category.value;
+
+              return (
+                <Pressable
+                  key={category.value}
+                  onPress={() => updateField('categoria_perfume', category.value)}
+                  style={[styles.segment, selected && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                    {category.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.fieldLabel}>Genero</Text>
+          <View style={styles.segmentRow}>
+            {perfumeGenders.map((gender) => {
+              const selected = form.genero_perfume === gender.value;
+
+              return (
+                <Pressable
+                  key={gender.value}
+                  onPress={() => updateField('genero_perfume', gender.value)}
+                  style={[styles.segment, selected && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                    {gender.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
           
           <FormInput
             label="Enlace de Imagen (URL alternativa)"
@@ -352,6 +406,41 @@ const styles = StyleSheet.create({
   },
   imageSpace: {
     height: 12,
+  },
+  fieldLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: spacing.xs,
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: spacing.md,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  segmentActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+    ...shadow.glow,
+  },
+  segmentText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  segmentTextActive: {
+    color: colors.ink,
   },
   formSectionDivider: {
     flexDirection: 'row',

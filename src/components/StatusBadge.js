@@ -19,12 +19,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   gold: {
-    backgroundColor: 'rgba(229, 192, 123, 0.08)',
-    borderColor: 'rgba(229, 192, 123, 0.25)',
+    backgroundColor: 'rgba(166, 136, 100, 0.1)',
+    borderColor: 'rgba(166, 136, 100, 0.28)',
   },
   success: {
-    backgroundColor: 'rgba(108, 178, 143, 0.08)',
-    borderColor: 'rgba(108, 178, 143, 0.25)',
+    backgroundColor: 'rgba(9, 144, 225, 0.1)',
+    borderColor: 'rgba(9, 144, 225, 0.28)',
   },
   danger: {
     backgroundColor: colors.dangerSurface,

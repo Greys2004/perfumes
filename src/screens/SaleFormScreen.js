@@ -16,6 +16,7 @@ import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import AnimatedPressable from '../components/AnimatedPressable';
 import CalendarDatePicker, { getLocalDateString } from '../components/CalendarDatePicker';
+import SearchBar from '../components/SearchBar';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenClients } from '../services/clientsService';
 import { listenActivePerfumes } from '../services/perfumesService';
@@ -82,9 +83,56 @@ function getPresentationMl(type, selectedPerfume, quantity) {
   return unitMl * quantity;
 }
 
+function getReservedStockByPurchase(items) {
+  const reservedByPurchaseId = {};
+  const remainingByPurchaseId = {};
+
+  items.forEach((item) => {
+    item.compra_ids.forEach((purchaseId) => {
+      if (remainingByPurchaseId[purchaseId] === undefined) {
+        remainingByPurchaseId[purchaseId] = Number(item.stock_por_compra?.[purchaseId]) || 0;
+      }
+    });
+  });
+
+  items.forEach((item) => {
+    let remainingMl = Number(item.ml_vendidos) || 0;
+
+    item.compra_ids
+      .map((purchaseId) => ({
+        id: purchaseId,
+        currentMl: remainingByPurchaseId[purchaseId] || 0,
+      }))
+      .filter((source) => source.currentMl > 0)
+      .sort((a, b) => a.currentMl - b.currentMl)
+      .forEach((source) => {
+        if (remainingMl <= 0) {
+          return;
+        }
+
+        const mlFromPurchase = Math.min(source.currentMl, remainingMl);
+        reservedByPurchaseId[source.id] = (reservedByPurchaseId[source.id] || 0) + mlFromPurchase;
+        remainingByPurchaseId[source.id] -= mlFromPurchase;
+        remainingMl -= mlFromPurchase;
+      });
+  });
+
+  return reservedByPurchaseId;
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 export default function SaleFormScreen({ navigation }) {
   const [clients, setClients] = useState([]);
   const [perfumes, setPerfumes] = useState([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [perfumeSearch, setPerfumeSearch] = useState('');
   const [prices, setPrices] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [form, setForm] = useState(() => getInitialForm());
@@ -142,12 +190,51 @@ export default function SaleFormScreen({ navigation }) {
   }, [form.perfume_id]);
 
   const selectedPerfume = perfumes.find((perfume) => perfume.id === form.perfume_id);
+  const filteredClients = useMemo(() => {
+    const searchText = normalizeText(clientSearch);
+
+    if (!searchText) {
+      return clients.slice(0, 8);
+    }
+
+    return clients.filter((client) => normalizeText(client.nombre).includes(searchText));
+  }, [clients, clientSearch]);
+  const filteredPerfumes = useMemo(() => {
+    const searchText = normalizeText(perfumeSearch);
+
+    if (!searchText) {
+      return perfumes.slice(0, 8);
+    }
+
+    return perfumes.filter((perfume) =>
+      normalizeText([
+        perfume.nombre,
+        perfume.marca,
+        perfume.descripcion_olor,
+        perfume.categoria_perfume,
+        perfume.genero_perfume,
+      ].join(' ')).includes(searchText)
+    );
+  }, [perfumes, perfumeSearch]);
+  const reservedStockByPurchase = useMemo(() => getReservedStockByPurchase(saleItems), [saleItems]);
   const availablePurchases = useMemo(
     () =>
       purchases
+        .map((purchase) => {
+          const originalMl = Number(purchase.ml_restantes) || 0;
+          const reservedMl = Number(reservedStockByPurchase[purchase.id]) || 0;
+          const adjustedMl = Math.max(originalMl - reservedMl, 0);
+
+          return {
+            ...purchase,
+            ml_originales_disponibles: originalMl,
+            ml_reservados_en_venta: reservedMl,
+            ml_restantes: adjustedMl,
+          };
+        })
         .filter((purchase) => Number(purchase.ml_restantes) > 0)
         .sort((a, b) => (Number(a.ml_restantes) || 0) - (Number(b.ml_restantes) || 0)),
-    [purchases]
+    [purchases, reservedStockByPurchase]
   );
   const selectedType = presentationTypes.find((type) => type.value === form.tipo_producto);
   const selectedPrice = prices.find((price) => price.tipo === form.tipo_producto);
@@ -354,11 +441,16 @@ export default function SaleFormScreen({ navigation }) {
       subtotal: currentItemTotal,
       compra_ids: form.compra_ids,
       stock_seleccionado: selectedStockMl,
+      stock_por_compra: availablePurchases.reduce((summary, purchase) => ({
+        ...summary,
+        [purchase.id]: Number(purchase.ml_restantes) || 0,
+      }), {}),
     };
   }
 
   function resetCurrentProductForm() {
     setManualStockSelection(false);
+    setPerfumeSearch('');
     setForm((currentForm) => ({
       ...currentForm,
       perfume_id: '',
@@ -681,12 +773,19 @@ export default function SaleFormScreen({ navigation }) {
             <Feather name="user" size={16} color={colors.gold} />
             <Text style={styles.panelTitle}>Seleccionar Cliente</Text>
           </View>
+          <SearchBar
+            value={clientSearch}
+            onChangeText={setClientSearch}
+            placeholder="Buscar cliente..."
+          />
           <OptionGrid
-            items={clients}
+            items={filteredClients}
             selectedId={form.cliente_id}
             getLabel={(client) => client.nombre}
             emptyText="Primero registra un cliente en el directorio."
-            onSelect={(client) => updateField('cliente_id', client.id)}
+            onSelect={(client) => {
+              updateField('cliente_id', client.id);
+            }}
           />
         </View>
 
@@ -695,8 +794,13 @@ export default function SaleFormScreen({ navigation }) {
             <Feather name="tag" size={16} color={colors.gold} />
             <Text style={styles.panelTitle}>Seleccionar Perfume</Text>
           </View>
+          <SearchBar
+            value={perfumeSearch}
+            onChangeText={setPerfumeSearch}
+            placeholder="Buscar perfume..."
+          />
           <OptionGrid
-            items={perfumes}
+            items={filteredPerfumes}
             selectedId={form.perfume_id}
             getLabel={(perfume) => `${perfume.nombre} (de ${perfume.marca || 'Marca Exclusiva'})`}
             emptyText="Primero registra un perfume en el catálogo."
@@ -795,9 +899,13 @@ export default function SaleFormScreen({ navigation }) {
             items={availablePurchases}
             selectedIds={form.compra_ids}
             multi
-            getLabel={(purchase) =>
-              `${purchase.ml_restantes} ml disponibles  ·  Lote: ${purchase.proveedor || 'Sin proveedor'}`
-            }
+            getLabel={(purchase) => {
+              const reservedText = purchase.ml_reservados_en_venta > 0
+                ? ` · ${purchase.ml_reservados_en_venta} ml ya apartados`
+                : '';
+
+              return `${purchase.ml_restantes} ml disponibles${reservedText}  ·  Lote: ${purchase.proveedor || 'Sin proveedor'}`;
+            }}
             emptyText="No hay compras de lotes con stock para esta fragancia."
             onSelect={togglePurchaseSelection}
           />
@@ -1204,7 +1312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   optionActive: {
-    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+    backgroundColor: 'rgba(166, 136, 100, 0.1)',
     borderColor: colors.gold,
   },
   optionContent: {
@@ -1487,15 +1595,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   planStatusBox: {
-    backgroundColor: 'rgba(229, 192, 123, 0.1)',
+    backgroundColor: 'rgba(166, 136, 100, 0.12)',
     borderColor: colors.lineStrong,
     borderWidth: 1,
     borderRadius: radius.sm,
     padding: spacing.sm,
   },
   planStatusSuccess: {
-    backgroundColor: 'rgba(108, 178, 143, 0.12)',
-    borderColor: 'rgba(108, 178, 143, 0.35)',
+    backgroundColor: 'rgba(9, 144, 225, 0.12)',
+    borderColor: 'rgba(9, 144, 225, 0.35)',
   },
   planStatusDanger: {
     backgroundColor: colors.dangerSurface,
@@ -1531,7 +1639,7 @@ const styles = StyleSheet.create({
   },
   promisePillActive: {
     borderColor: colors.gold,
-    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+    backgroundColor: 'rgba(166, 136, 100, 0.1)',
   },
   promisePillDate: {
     color: colors.text,

@@ -17,6 +17,7 @@ import PerfumesListScreen from '../screens/PerfumesListScreen';
 import ReceivablesCalendarScreen from '../screens/ReceivablesCalendarScreen';
 import SaleDetailScreen from '../screens/SaleDetailScreen';
 import SaleFormScreen from '../screens/SaleFormScreen';
+import { colors } from '../theme';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,11 +34,11 @@ export default function AppNavigator() {
     <NavigationContainer ref={setNavigationRef}>
       <Stack.Navigator
         screenOptions={({ navigation }) => ({
-          headerStyle: { backgroundColor: '#18191c' },
-          headerTintColor: '#f8f4ed',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
           headerTitleStyle: { fontWeight: '900', fontSize: 16 },
           headerShadowVisible: false,
-          contentStyle: { backgroundColor: '#18191c' },
+          contentStyle: { backgroundColor: colors.background },
           headerLeft: () => (
             <View style={styles.headerLeft}>
               <MenuButton onPress={() => setMenuVisible(true)} />
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    color: '#d9ad69',
+    color: colors.gold,
     fontSize: 26,
     lineHeight: 30,
     fontWeight: '800',
