@@ -49,18 +49,19 @@ export default function ClientsListScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <View style={styles.headerKickerRow}>
-            <Text style={styles.kicker}>Directorio Comercial</Text>
+        <View style={styles.headerTitles}>
+          <Text style={styles.kicker}>Directorio Comercial</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Clientes</Text>
             <View style={styles.clientCountChip}>
-              <Text style={styles.clientCountChipText}>{filteredClients.length} Clientes</Text>
+              <Text style={styles.clientCountChipText}>{filteredClients.length}</Text>
             </View>
           </View>
-          <Text style={styles.title}>Clientes</Text>
         </View>
         <AnimatedPressable
           onPress={() => navigation.navigate('ClientForm')}
           style={styles.addButton}
+          scaleTo={0.94}
         >
           <Feather name="user-plus" size={15} color={colors.white} style={{ marginRight: 6 }} />
           <Text style={styles.addButtonText}>Agregar</Text>
@@ -160,20 +161,19 @@ function ClientCard({ client, onPress, onEdit, onDelete, onNewSale }) {
             }}
             style={styles.actionButtonWhatsApp}
           >
-            <Feather name="message-circle" size={13} color="#128C7E" style={{ marginRight: 4 }} />
+            <Feather name="message-circle" size={14} color="#128C7E" style={{ marginRight: 5 }} />
             <Text style={styles.actionButtonWhatsAppText}>WhatsApp</Text>
           </Pressable>
         )}
         <Pressable onPress={onNewSale} style={styles.actionButtonSale}>
-          <Feather name="plus-circle" size={13} color={colors.gold} style={{ marginRight: 4 }} />
-          <Text style={styles.actionButtonSaleText}>Venta</Text>
+          <Feather name="plus-circle" size={14} color={colors.gold} style={{ marginRight: 5 }} />
+          <Text style={styles.actionButtonSaleText}>Vender</Text>
         </Pressable>
-        <Pressable onPress={onEdit} style={styles.actionButton}>
-          <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 4 }} />
-          <Text style={styles.actionButtonText}>Editar</Text>
+        <Pressable onPress={onEdit} style={styles.actionIconBtn}>
+          <Feather name="edit-2" size={14} color={colors.ink} />
         </Pressable>
-        <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Feather name="user-minus" size={13} color={colors.rose} />
+        <Pressable onPress={onDelete} style={styles.actionIconBtnDark}>
+          <Feather name="trash-2" size={14} color={colors.rose} />
         </Pressable>
       </View>
     </AnimatedPressable>
@@ -210,10 +210,12 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.petroleum,
     borderRadius: radius.pill,
     paddingHorizontal: 16,
-    minHeight: 40,
+    height: 40,
+    flexShrink: 0,
     ...shadow.card,
   },
   addButtonText: {
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   emptyContainer: {
     backgroundColor: colors.surfaceCard,
@@ -352,11 +354,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  headerKickerRow: {
+  headerTitles: {
+    flex: 1,
+    marginRight: 10,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
   },
   clientCountChip: {
     backgroundColor: 'rgba(166, 106, 53, 0.12)',
@@ -372,16 +377,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   actionButtonWhatsApp: {
-    flex: 1.2,
+    flex: 1,
     minHeight: 38,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(37, 211, 102, 0.1)',
+    backgroundColor: 'rgba(37, 211, 102, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(37, 211, 102, 0.3)',
+    borderColor: 'rgba(37, 211, 102, 0.35)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
   actionButtonWhatsAppText: {
     color: '#128C7E',
@@ -398,11 +403,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
   actionButtonSaleText: {
     color: colors.gold,
     fontSize: 12,
     fontWeight: '800',
+  },
+  actionIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIconBtnDark: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

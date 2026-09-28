@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 110, // Safe padding for bottom luxury dock
+    paddingBottom: 160, // Safe padding for bottom luxury dock
   },
 
   // Refined Header Block

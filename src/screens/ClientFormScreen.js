@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   headerBlock: {
     alignItems: 'center',

@@ -125,14 +125,14 @@ export default function PerfumesListScreen({ navigation }) {
     <View style={styles.container}>
       {/* Header Bar */}
       <View style={styles.header}>
-        <View>
-          <View style={styles.headerKickerRow}>
-            <Text style={styles.kicker}>Gestión de Fragancias</Text>
+        <View style={styles.headerTitles}>
+          <Text style={styles.kicker}>CATÁLOGO DE FRAGANCIAS</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Perfumes</Text>
             <View style={styles.countBadgeChip}>
-              <Text style={styles.countBadgeChipText}>{filteredPerfumes.length} Fragancias</Text>
+              <Text style={styles.countBadgeChipText}>{filteredPerfumes.length}</Text>
             </View>
           </View>
-          <Text style={styles.title}>Catálogo de Stock</Text>
         </View>
         <AnimatedPressable
           onPress={() => navigation.navigate('PerfumeForm')}
@@ -407,8 +407,8 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete, onSell }) {
           <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
           <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
-        <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Feather name="eye-off" size={13} color={colors.rose} />
+        <Pressable onPress={onDelete} style={styles.actionIconBtnDark}>
+          <Feather name="eye-off" size={14} color={colors.rose} />
         </Pressable>
       </View>
     </AnimatedPressable>
@@ -445,10 +445,12 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.petroleum,
     borderRadius: radius.pill,
     paddingHorizontal: 16,
-    minHeight: 40,
+    height: 40,
+    flexShrink: 0,
     ...shadow.card,
   },
   addButtonText: {
@@ -473,7 +475,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   listContent: {
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   filterBarButton: {
     minHeight: 46,
@@ -749,11 +751,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  headerKickerRow: {
+  headerTitles: {
+    flex: 1,
+    marginRight: 10,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
   },
   countBadgeChip: {
     backgroundColor: 'rgba(166, 106, 53, 0.12)',
@@ -784,6 +789,16 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 12,
     fontWeight: '800',
+  },
+  actionIconBtnDark: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inactiveSection: {
     backgroundColor: colors.surfaceCard,

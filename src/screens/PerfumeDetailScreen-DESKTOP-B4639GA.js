@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -230,6 +231,25 @@ export default function PerfumeDetailScreen({ route }) {
     }
   }
 
+  function handleSharePerfumeWhatsApp() {
+    const pricesText = prices.length > 0
+      ? prices.map((p) => `• ${p.ml}ml: $${p.precio_publico} MXN`).join('\n')
+      : '• Consultar presentaciones disponibles';
+
+    const text = `✨ *${perfume.nombre}* - ${perfume.marca?.toUpperCase() || 'ALTA GAMA'}
+${perfume.descripcion_olor ? `"${perfume.descripcion_olor}"\n` : ''}
+🏛 *Categoría:* ${perfume.categoria_perfume || 'Alta gama'} · ${perfume.genero_perfume || 'Unisex'}
+${perfume.duracion ? `⏱ *Duración:* ${perfume.duracion}\n` : ''}
+🌸 *Notas Olfativas:*
+${perfume.notas_salida ? `• Salida: ${perfume.notas_salida}\n` : ''}${perfume.notas_corazon ? `• Cuerpo: ${perfume.notas_corazon}\n` : ''}${perfume.notas_fondo ? `• Fondo: ${perfume.notas_fondo}\n` : ''}
+💎 *Presentaciones Disponibles:*
+${pricesText}
+
+¿Te gustaría apartar una muestra o decant? Quedo a tu servicio.`;
+
+    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`);
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -301,6 +321,27 @@ export default function PerfumeDetailScreen({ route }) {
             )}
           </View>
         </View>
+      </View>
+
+      {/* Quick Actions Row */}
+      <View style={styles.heroQuickActionsRow}>
+        <AnimatedPressable
+          onPress={() => navigation.navigate('SaleForm', { perfumeId: perfume.id })}
+          style={styles.heroActionSaleBtn}
+          scaleTo={0.95}
+        >
+          <Feather name="plus-circle" size={15} color={colors.white} />
+          <Text style={styles.heroActionSaleBtnText}>Vender Esta Fragancia</Text>
+        </AnimatedPressable>
+
+        <AnimatedPressable
+          onPress={handleSharePerfumeWhatsApp}
+          style={styles.heroActionWhatsAppBtn}
+          scaleTo={0.95}
+        >
+          <Feather name="message-circle" size={15} color="#128C7E" />
+          <Text style={styles.heroActionWhatsAppBtnText}>Ficha WhatsApp</Text>
+        </AnimatedPressable>
       </View>
 
       {!!error && (
@@ -790,7 +831,46 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 110, // Safe padding for bottom luxury dock
+    paddingBottom: 160, // Safe padding for bottom luxury dock
+  },
+  heroQuickActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: spacing.md,
+  },
+  heroActionSaleBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.petroleum,
+    paddingVertical: 12,
+    borderRadius: radius.pill,
+    ...shadow.card,
+  },
+  heroActionSaleBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  heroActionWhatsAppBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(37, 211, 102, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 211, 102, 0.35)',
+    paddingVertical: 12,
+    borderRadius: radius.pill,
+  },
+  heroActionWhatsAppBtnText: {
+    color: '#128C7E',
+    fontSize: 12,
+    fontWeight: '800',
   },
   heroCard: {
     backgroundColor: '#FFFFFF',

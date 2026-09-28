@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
@@ -123,6 +123,45 @@ export default function SaleDetailScreen({ navigation, route }) {
         },
       ]
     );
+  }
+
+  function handleShareTicketWhatsApp() {
+    const clientName = client?.nombre || 'Cliente';
+    const phone = client?.telefono ? client.telefono.replace(/[^0-9]/g, '') : '';
+    const date = formatDateValue(sale.fecha_venta);
+
+    const itemsText = groupedDetails
+      .map((item) => {
+        const pName = getPerfumeName(item.perfume_id);
+        const tipo = item.tipo_producto ? item.tipo_producto.replace('_', ' ') : 'perfume';
+        return `• ${item.cantidad}x ${pName} (${tipo}, ${item.ml_vendidos}ml) - $${item.subtotal || 0} MXN`;
+      })
+      .join('\n');
+
+    const statusText =
+      sale.estado_pago === 'liquidado'
+        ? '✨ *Estado:* Liquidado completamente'
+        : `⏳ *Saldo Pendiente:* $${remaining} MXN`;
+
+    const text = `*COMPROBANTE DE VENTA · AROMAORIGEN*
+📅 *Fecha:* ${date}
+👤 *Cliente:* ${clientName}
+
+📦 *Artículos:*
+${itemsText}
+
+💰 *Total Venta:* $${sale.total || 0} MXN
+💳 *Abonado:* $${totalPaid} MXN
+${statusText}
+
+¡Agradecemos mucho tu preferencia!`;
+
+    const encoded = encodeURIComponent(text);
+    if (phone) {
+      Linking.openURL(`https://wa.me/${phone}?text=${encoded}`);
+    } else {
+      Linking.openURL(`https://wa.me/?text=${encoded}`);
+    }
   }
 
   return (
@@ -352,6 +391,16 @@ export default function SaleDetailScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* WhatsApp Share Ticket Button */}
+      <View style={{ marginBottom: 12 }}>
+        <PrimaryButton
+          title="Compartir Comprobante por WhatsApp"
+          onPress={handleShareTicketWhatsApp}
+          icon="message-circle"
+          variant="amber"
+        />
+      </View>
+
       {/* Action Buttons */}
       <View style={styles.actionsBlock}>
         <PrimaryButton
@@ -378,7 +427,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   invoiceHeroCard: {
     backgroundColor: colors.surfaceCard,
