@@ -157,7 +157,7 @@ export default function PerfumeFormScreen({ navigation, route }) {
             <Feather name="droplet" size={24} color={colors.amber} />
           </View>
           <Text style={styles.kicker}>
-            {editingPerfume ? 'EDICIÓN DE FÓRMULA' : 'CREACIÓN PRIVÉE'}
+            {editingPerfume ? 'EDICIÓN DE FÓRMULA' : 'NUEVA FRAGANCIA'}
           </Text>
           <Text style={styles.title}>
             {editingPerfume ? 'Editar Fragancia' : 'Nueva Fragancia'}

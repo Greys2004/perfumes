@@ -29,8 +29,8 @@ const quickActions = [
     icon: 'droplet',
   },
   {
-    label: 'Nuevo Cliente Privé',
-    sublabel: 'Registrar ficha VIP',
+    label: 'Nuevo Cliente',
+    sublabel: 'Registrar contacto y gustos',
     routeName: 'ClientForm',
     icon: 'user-plus',
   },

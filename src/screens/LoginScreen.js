@@ -45,7 +45,7 @@ export default function LoginScreen() {
             <Image source={require('../../assets/icon.png')} style={styles.logo} />
           </View>
           <Text style={styles.brand}>AromaOrigen</Text>
-          <Text style={styles.brandSubtitle}>Perfumería de Alta Gama • Panel Privado</Text>
+          <Text style={styles.brandSubtitle}>Perfumería de Alta Gama • Sistema de Gestión</Text>
         </View>
 
         <View style={styles.card}>

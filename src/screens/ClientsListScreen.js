@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -49,7 +50,12 @@ export default function ClientsListScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.kicker}>Directorio Comercial</Text>
+          <View style={styles.headerKickerRow}>
+            <Text style={styles.kicker}>Directorio Comercial</Text>
+            <View style={styles.clientCountChip}>
+              <Text style={styles.clientCountChipText}>{filteredClients.length} Clientes</Text>
+            </View>
+          </View>
           <Text style={styles.title}>Clientes</Text>
         </View>
         <AnimatedPressable
@@ -93,6 +99,7 @@ export default function ClientsListScreen({ navigation }) {
               client={item}
               onPress={() => navigation.navigate('ClientDetail', { client: item })}
               onEdit={() => navigation.navigate('ClientForm', { client: item })}
+              onNewSale={() => navigation.navigate('SaleForm', { clientId: item.id })}
               onDelete={() => {
                 Alert.alert(
                   'Desactivar cliente',
@@ -115,7 +122,7 @@ export default function ClientsListScreen({ navigation }) {
   );
 }
 
-function ClientCard({ client, onPress, onEdit, onDelete }) {
+function ClientCard({ client, onPress, onEdit, onDelete, onNewSale }) {
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -145,13 +152,28 @@ function ClientCard({ client, onPress, onEdit, onDelete }) {
       </View>
 
       <View style={styles.cardFooter}>
+        {!!client.telefono && (
+          <Pressable
+            onPress={() => {
+              const clean = client.telefono.replace(/[^0-9]/g, '');
+              Linking.openURL(`https://wa.me/${clean}`);
+            }}
+            style={styles.actionButtonWhatsApp}
+          >
+            <Feather name="message-circle" size={13} color="#128C7E" style={{ marginRight: 4 }} />
+            <Text style={styles.actionButtonWhatsAppText}>WhatsApp</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={onNewSale} style={styles.actionButtonSale}>
+          <Feather name="plus-circle" size={13} color={colors.gold} style={{ marginRight: 4 }} />
+          <Text style={styles.actionButtonSaleText}>Venta</Text>
+        </Pressable>
         <Pressable onPress={onEdit} style={styles.actionButton}>
-          <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
+          <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 4 }} />
           <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Feather name="user-minus" size={13} color={colors.rose} style={{ marginRight: 5 }} />
-          <Text style={styles.actionButtonTextLight}>Quitar</Text>
+          <Feather name="user-minus" size={13} color={colors.rose} />
         </Pressable>
       </View>
     </AnimatedPressable>
@@ -310,8 +332,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonDark: {
-    flex: 1,
     minHeight: 38,
+    paddingHorizontal: 12,
     borderRadius: radius.md,
     backgroundColor: colors.dangerSurface,
     borderWidth: 1,
@@ -327,6 +349,59 @@ const styles = StyleSheet.create({
   },
   actionButtonTextLight: {
     color: colors.danger,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  headerKickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  clientCountChip: {
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    borderColor: 'rgba(166, 106, 53, 0.3)',
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  clientCountChipText: {
+    color: colors.amber,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  actionButtonWhatsApp: {
+    flex: 1.2,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(37, 211, 102, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 211, 102, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  actionButtonWhatsAppText: {
+    color: '#128C7E',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  actionButtonSale: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.petroleum,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  actionButtonSaleText: {
+    color: colors.gold,
     fontSize: 12,
     fontWeight: '800',
   },

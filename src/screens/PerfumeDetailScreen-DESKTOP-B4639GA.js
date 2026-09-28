@@ -256,7 +256,7 @@ export default function PerfumeDetailScreen({ route }) {
 
         <View style={styles.heroDetails}>
           <View style={styles.brandRow}>
-            <Text style={styles.brandBadge}>{perfume.marca?.toUpperCase() || 'MAISON PRIVÉE'}</Text>
+            <Text style={styles.brandBadge}>{perfume.marca?.toUpperCase() || 'MARCA EXCLUSIVA'}</Text>
             {!!perfume.categoria_perfume && (
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryBadgeText}>

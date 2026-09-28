@@ -101,7 +101,7 @@ export default function ClientFormScreen({ navigation, route }) {
             </View>
           </LinearGradient>
           <Text style={styles.kicker}>
-            {editingClient ? 'FICHA DE CLIENTE VIP' : 'NUEVO CLIENTE PRIVÉ'}
+            {editingClient ? 'INFORMACIÓN DE CONTACTO' : 'NUEVO CLIENTE'}
           </Text>
           <Text style={styles.title}>
             {editingClient ? 'Actualizar Cliente' : 'Registrar Cliente'}
@@ -174,7 +174,7 @@ export default function ClientFormScreen({ navigation, route }) {
             onChangeText={(value) => updateField('notas', value)}
             placeholder="Ej. Predilección por notas ambarinas, vainilla de Madagascar o maderas nobles; detalles de dirección de entrega..."
             multiline
-            helperText="Anotaciones privadas para recomendar fragancias afines."
+            helperText="Notas de preferencias o gustos en fragancias."
           />
         </View>
 
@@ -186,7 +186,7 @@ export default function ClientFormScreen({ navigation, route }) {
                 ? 'Guardando Cliente...'
                 : editingClient
                   ? 'Guardar Modificaciones'
-                  : 'Registrar Cliente Privé'
+                  : 'Registrar Cliente'
             }
             onPress={handleSave}
             disabled={saving}

@@ -141,7 +141,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
         <Text style={styles.headerSubtitle}>
-          Colección privada de extractos, decants y fórmulas exclusivas.
+          Colección selecta de extractos, decants y fragancias exclusivas.
         </Text>
       </View>
 

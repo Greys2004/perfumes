@@ -360,7 +360,10 @@ export default function DashboardScreen() {
 
           {/* Valor Principal */}
           <View style={styles.heroMain}>
-            <Text style={styles.heroLabel}>Total Vendido: {periodLabel}</Text>
+            <View style={styles.heroMainHeader}>
+              <Text style={styles.heroLabel}>VENTAS TOTALES ({periodLabel.toUpperCase()})</Text>
+              <Feather name="trending-up" size={16} color={colors.amber} />
+            </View>
             <Text
               style={[
                 styles.heroValue,
@@ -369,16 +372,65 @@ export default function DashboardScreen() {
             >
               ${periodDashboard.totalVendido}
             </Text>
-            <View style={styles.heroDivider} />
-            <Text style={styles.heroNote}>
-              Cobrado <Text style={styles.goldHighlight}>${periodDashboard.totalPagado}</Text>  ·  Ganancia <Text style={styles.goldHighlight}>${periodDashboard.gananciaVendida}</Text>  ·  Deuda <Text style={styles.goldHighlight}>${periodDashboard.deudaClientes}</Text>
-            </Text>
           </View>
 
-          <View style={styles.heroGrid}>
-            <MiniStat icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.rose} />
-            <MiniStat icon="dollar-sign" label="Cobrado" value={`$${periodDashboard.totalPagado}`} color={colors.success} />
-            <MiniStat icon="box" label="Stock ml" value={`${stockTotal} ml`} color={colors.gold} />
+          {/* 4-Card Executive Grid */}
+          <View style={styles.kpiGrid}>
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiCardTop}>
+                <Feather name="check-circle" size={13} color={colors.success} />
+                <Text style={styles.kpiLabel}>Cobrado</Text>
+              </View>
+              <Text style={[styles.kpiValue, { color: colors.success }]}>
+                ${periodDashboard.totalPagado}
+              </Text>
+            </View>
+
+            <View style={[styles.kpiCard, styles.kpiCardFocus]}>
+              <View style={styles.kpiCardTop}>
+                <Feather name="award" size={13} color={colors.amber} />
+                <Text style={[styles.kpiLabel, { color: colors.amber }]}>Ganancia Est.</Text>
+              </View>
+              <Text style={[styles.kpiValue, { color: colors.amber }]}>
+                ${periodDashboard.gananciaVendida}
+              </Text>
+            </View>
+
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiCardTop}>
+                <Feather name="alert-circle" size={13} color={colors.rose} />
+                <Text style={styles.kpiLabel}>Por Cobrar</Text>
+              </View>
+              <Text style={[styles.kpiValue, { color: Number(periodDashboard.deudaClientes) > 0 ? colors.rose : colors.text }]}>
+                ${periodDashboard.deudaClientes}
+              </Text>
+            </View>
+
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiCardTop}>
+                <Feather name="shopping-bag" size={13} color={colors.petroleum} />
+                <Text style={styles.kpiLabel}>Inversión Compras</Text>
+              </View>
+              <Text style={styles.kpiValue}>
+                ${periodDashboard.totalGastado}
+              </Text>
+            </View>
+          </View>
+
+          {/* Sub-bar with secondary indicators */}
+          <View style={styles.heroFooterStrip}>
+            <View style={styles.heroFooterItem}>
+              <Feather name="dollar-sign" size={12} color={colors.gold} style={{ marginRight: 4 }} />
+              <Text style={styles.heroFooterText}>
+                Ganancia Real: <Text style={styles.heroFooterBold}>${periodDashboard.gananciaCobrada}</Text>
+              </Text>
+            </View>
+            <View style={styles.heroFooterItem}>
+              <Feather name="box" size={12} color={colors.gold} style={{ marginRight: 4 }} />
+              <Text style={styles.heroFooterText}>
+                Stock Total: <Text style={styles.heroFooterBold}>{stockTotal} ml</Text>
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -387,20 +439,6 @@ export default function DashboardScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-
-        {/* Métrica Rail Horizontal */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.metricRail}
-        >
-          <DashboardMetricCard icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.rose} />
-          <DashboardMetricCard icon="tag" label="Vendido" value={`$${periodDashboard.totalVendido}`} color={colors.text} />
-          <DashboardMetricCard icon="dollar-sign" label="Cobrado" value={`$${periodDashboard.totalPagado}`} color={colors.success} />
-          <DashboardMetricCard icon="alert-circle" label="Deben" value={`$${periodDashboard.deudaClientes}`} color={colors.amber} />
-          <DashboardMetricCard icon="trending-up" label="Ganancia Ventas" value={`$${periodDashboard.gananciaVendida}`} color={colors.gold} focus />
-          <DashboardMetricCard icon="trending-up" label="Ganancia Real" value={`$${periodDashboard.gananciaCobrada}`} color={colors.success} focus />
-        </ScrollView>
 
         {/* Mapa del Periodo */}
         <View style={styles.panel}>
@@ -881,12 +919,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   heroMain: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     backgroundColor: colors.field,
     borderRadius: radius.xl,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.lineStrong,
+  },
+  heroMainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   heroLabel: {
     color: colors.amber,
@@ -894,27 +938,72 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 4,
   },
   heroValue: {
     color: colors.text,
-    fontSize: 38,
+    fontSize: 34,
     fontWeight: '900',
     letterSpacing: -0.8,
   },
-  heroDivider: {
-    height: 1,
-    backgroundColor: colors.lineSoft,
-    marginVertical: spacing.sm,
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: spacing.xs,
   },
-  goldHighlight: {
-    color: colors.amber,
-    fontWeight: '900',
+  kpiCard: {
+    width: '48.5%',
+    backgroundColor: colors.field,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.lg,
+    padding: spacing.sm,
+    minHeight: 62,
+    justifyContent: 'center',
   },
-  heroNote: {
+  kpiCardFocus: {
+    backgroundColor: 'rgba(166, 106, 53, 0.08)',
+    borderColor: 'rgba(166, 106, 53, 0.3)',
+  },
+  kpiCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 2,
+  },
+  kpiLabel: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  kpiValue: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  heroFooterStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  heroFooterItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroFooterText: {
+    color: colors.textSubtle,
+    fontSize: 11,
+  },
+  heroFooterBold: {
+    color: colors.text,
+    fontWeight: '800',
   },
   heroGrid: {
     flexDirection: 'row',

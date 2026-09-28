@@ -138,7 +138,7 @@ export default function SaleDetailScreen({ navigation, route }) {
             <Feather name="file-text" size={20} color={colors.gold} />
           </View>
           <View style={styles.invoiceHeroTitleGroup}>
-            <Text style={styles.kicker}>RECIBO DE VENTA PRIVÉE</Text>
+            <Text style={styles.kicker}>COMPROBANTE DE VENTA</Text>
             <Text style={styles.clientTitle}>{client.nombre}</Text>
           </View>
           <View

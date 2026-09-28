@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import AnimatedPressable from '../components/AnimatedPressable';
 import CalendarDatePicker from '../components/CalendarDatePicker';
+import SearchBar from '../components/SearchBar';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenAllPayments } from '../services/clientAccountService';
 import { listenClients } from '../services/clientsService';
@@ -40,6 +41,7 @@ export default function PaymentsScreen() {
   const [expandedSaleId, setExpandedSaleId] = useState('');
   const [editingPaymentId, setEditingPaymentId] = useState('');
   const [savingSaleId, setSavingSaleId] = useState('');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -115,6 +117,25 @@ export default function PaymentsScreen() {
       return sum + summary.remaining;
     }, 0);
   }, [sales, payments]);
+
+  const filteredSales = useMemo(() => {
+    if (!search.trim()) return sales;
+    const term = search.toLowerCase().trim();
+    return sales.filter((sale) => {
+      const clientName = getClientName(sale.cliente_id).toLowerCase();
+      const perfumeNames = getSalePerfumeNames(sale.id).toLowerCase();
+      return clientName.includes(term) || perfumeNames.includes(term);
+    });
+  }, [sales, search, clients, perfumes, saleDetails]);
+
+  function handleWhatsAppReminder(client, summary) {
+    if (!client?.telefono) return;
+    const cleanPhone = client.telefono.replace(/[^0-9]/g, '');
+    const message = encodeURIComponent(
+      `Hola ${client.nombre}, te saludo con gusto de AromaOrigen. Te comparto el detalle de tu saldo pendiente de $${summary.remaining} MXN por tus fragancias. Quedo a tu disposición para cualquier duda o registro de abono. ¡Muchas gracias!`
+    );
+    Linking.openURL(`https://wa.me/${cleanPhone}?text=${message}`);
+  }
 
   function getForm(saleId) {
     return (
@@ -268,6 +289,28 @@ export default function PaymentsScreen() {
         </View>
       )}
 
+      {/* Search Bar for Pending Sales */}
+      {sales.length > 0 && (
+        <View style={styles.searchSection}>
+          <SearchBar
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Buscar por cliente o perfume..."
+          />
+          <View style={styles.searchCountRow}>
+            <Text style={styles.searchCountText}>
+              {filteredSales.length} de {sales.length} cuenta{sales.length === 1 ? '' : 's'} por cobrar
+            </Text>
+            {!!search && (
+              <Pressable onPress={() => setSearch('')} style={styles.clearSearchBtn}>
+                <Feather name="x-circle" size={13} color={colors.textMuted} style={{ marginRight: 4 }} />
+                <Text style={styles.clearSearchText}>Limpiar filtro</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Pending Sales List */}
       {sales.length === 0 ? (
         <View style={styles.emptyCard}>
@@ -277,8 +320,17 @@ export default function PaymentsScreen() {
             No hay cuentas pendientes de cobro registradas.
           </Text>
         </View>
+      ) : filteredSales.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Feather name="search" size={28} color={colors.gold} style={{ marginBottom: 8 }} />
+          <Text style={styles.emptyTitle}>Sin coincidencias</Text>
+          <Text style={styles.emptySub}>
+            No encontramos cuentas pendientes que coincidan con "{search}".
+          </Text>
+        </View>
       ) : (
-        sales.map((sale) => {
+        filteredSales.map((sale) => {
+          const client = clients.find((c) => c.id === sale.cliente_id);
           const paymentForm = getForm(sale.id);
           const summary = getSaleSummary(sale);
           const isExpanded = expandedSaleId === sale.id;
@@ -327,6 +379,17 @@ export default function PaymentsScreen() {
               {/* Expanded Ledger Panel */}
               {isExpanded && (
                 <View style={styles.expandedVault}>
+                  {/* Quick WhatsApp Reminder Button */}
+                  {!!client?.telefono && (
+                    <Pressable
+                      onPress={() => handleWhatsAppReminder(client, summary)}
+                      style={styles.whatsAppReminderBtn}
+                    >
+                      <Feather name="message-circle" size={14} color="#25D366" style={{ marginRight: 6 }} />
+                      <Text style={styles.whatsAppReminderText}>Enviar Recordatorio por WhatsApp</Text>
+                    </Pressable>
+                  )}
+
                   {/* Financial Mini Rail */}
                   <View style={styles.miniRail}>
                     <View style={styles.miniRailCard}>
@@ -800,5 +863,47 @@ const styles = StyleSheet.create({
   },
   submitAbonoRow: {
     marginTop: 8,
+  },
+  searchSection: {
+    marginBottom: spacing.sm,
+  },
+  searchCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginTop: 4,
+    marginBottom: spacing.xs,
+  },
+  searchCountText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  clearSearchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearSearchText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  whatsAppReminderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(37, 211, 102, 0.12)',
+    borderColor: 'rgba(37, 211, 102, 0.35)',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: spacing.sm,
+  },
+  whatsAppReminderText: {
+    color: '#128C7E',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

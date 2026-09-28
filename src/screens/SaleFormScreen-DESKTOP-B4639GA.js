@@ -665,7 +665,7 @@ export default function SaleFormScreen({ navigation }) {
       >
         {/* Header Block */}
         <View style={styles.headerBlock}>
-          <Text style={styles.kicker}>PUNTO DE VENTA PRIVÉ</Text>
+          <Text style={styles.kicker}>REGISTRO DE VENTA</Text>
           <Text style={styles.title}>Nueva Venta</Text>
           <Text style={styles.subtitle}>
             Selección ágil y descuento automático de inventario por rotación de lotes.
@@ -679,13 +679,13 @@ export default function SaleFormScreen({ navigation }) {
           </View>
         )}
 
-        {/* STEP 1: CLIENTE PRIVÉ (Compact Card with Modal Selector) */}
+        {/* STEP 1: CLIENTE (Compact Card with Modal Selector) */}
         <View style={styles.cardPanel}>
           <View style={styles.panelHeaderRow}>
             <View style={styles.stepBadge}>
               <Text style={styles.stepBadgeText}>1</Text>
             </View>
-            <Text style={styles.panelTitle}>Cliente Privé</Text>
+            <Text style={styles.panelTitle}>Cliente</Text>
             {!!selectedClient && (
               <Pressable
                 onPress={() => setClientModalOpen(true)}
@@ -1153,7 +1153,7 @@ export default function SaleFormScreen({ navigation }) {
 
           <View style={{ marginTop: spacing.md }}>
             <PrimaryButton
-              title={saving ? 'Procesando Venta...' : 'Registrar Venta Privée'}
+              title={saving ? 'Procesando Venta...' : 'Registrar Venta'}
               onPress={handleSave}
               disabled={saving || (saleItems.length === 0 && !form.perfume_id)}
               loading={saving}

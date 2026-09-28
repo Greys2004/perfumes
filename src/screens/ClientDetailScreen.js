@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import AnimatedPressable from '../components/AnimatedPressable';
@@ -80,7 +80,7 @@ export default function ClientDetailScreen({ navigation, route }) {
           </View>
           <View style={styles.heroTitles}>
             <View style={styles.badgeRow}>
-              <Text style={styles.kicker}>CLIENTE PRIVÉ</Text>
+              <Text style={styles.kicker}>CLIENTE</Text>
               <View style={styles.vipTag}>
                 <Text style={styles.vipTagText}>VIP</Text>
               </View>
@@ -118,6 +118,20 @@ export default function ClientDetailScreen({ navigation, route }) {
             <Feather name="plus-circle" size={14} color={colors.white} />
             <Text style={styles.actionBtnPrimaryText}>Nueva Venta</Text>
           </AnimatedPressable>
+
+          {!!client.telefono && (
+            <AnimatedPressable
+              onPress={() => {
+                const clean = client.telefono.replace(/[^0-9]/g, '');
+                Linking.openURL(`https://wa.me/${clean}`);
+              }}
+              style={styles.actionBtnWhatsApp}
+              scaleTo={0.94}
+            >
+              <Feather name="message-circle" size={14} color="#128C7E" />
+              <Text style={styles.actionBtnWhatsAppText}>WhatsApp</Text>
+            </AnimatedPressable>
+          )}
 
           <AnimatedPressable
             onPress={() => navigation.navigate('ClientForm', { client })}
@@ -410,6 +424,23 @@ const styles = StyleSheet.create({
   },
   actionBtnSecondaryText: {
     color: colors.petroleum,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  actionBtnWhatsApp: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(37, 211, 102, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(37, 211, 102, 0.35)',
+    paddingVertical: 10,
+    borderRadius: radius.pill,
+  },
+  actionBtnWhatsAppText: {
+    color: '#128C7E',
     fontSize: 12,
     fontWeight: '800',
   },

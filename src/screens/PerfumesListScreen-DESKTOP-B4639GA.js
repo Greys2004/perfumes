@@ -126,7 +126,12 @@ export default function PerfumesListScreen({ navigation }) {
       {/* Header Bar */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.kicker}>Gestión de Fragancias</Text>
+          <View style={styles.headerKickerRow}>
+            <Text style={styles.kicker}>Gestión de Fragancias</Text>
+            <View style={styles.countBadgeChip}>
+              <Text style={styles.countBadgeChipText}>{filteredPerfumes.length} Fragancias</Text>
+            </View>
+          </View>
           <Text style={styles.title}>Catálogo de Stock</Text>
         </View>
         <AnimatedPressable
@@ -290,6 +295,7 @@ export default function PerfumesListScreen({ navigation }) {
               perfume={item}
               onPress={() => navigation.navigate('PerfumeDetail', { perfume: item })}
               onEdit={() => navigation.navigate('PerfumeForm', { perfume: item })}
+              onSell={() => navigation.navigate('SaleForm', { perfumeId: item.id })}
               onDelete={() => {
                 Alert.alert(
                   'Ocultar perfume',
@@ -340,7 +346,7 @@ function InactivePerfumesSection({ perfumes, onRestore }) {
   );
 }
 
-function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
+function PerfumeCard({ perfume, onPress, onEdit, onDelete, onSell }) {
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -393,13 +399,16 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
       </View>
 
       <View style={styles.adminActions}>
+        <Pressable onPress={onSell} style={styles.actionButtonSell}>
+          <Feather name="plus-circle" size={13} color={colors.gold} style={{ marginRight: 5 }} />
+          <Text style={styles.actionButtonSellText}>Vender</Text>
+        </Pressable>
         <Pressable onPress={onEdit} style={styles.actionButton}>
           <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
-          <Text style={styles.actionButtonText}>Editar Ficha</Text>
+          <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Feather name="eye-off" size={13} color={colors.rose} style={{ marginRight: 5 }} />
-          <Text style={styles.actionButtonTextLight}>Ocultar</Text>
+          <Feather name="eye-off" size={13} color={colors.rose} />
         </Pressable>
       </View>
     </AnimatedPressable>
@@ -720,8 +729,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonDark: {
-    flex: 1,
     minHeight: 38,
+    paddingHorizontal: 12,
     borderRadius: radius.md,
     backgroundColor: colors.dangerSurface,
     borderWidth: 1,
@@ -737,6 +746,42 @@ const styles = StyleSheet.create({
   },
   actionButtonTextLight: {
     color: colors.danger,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  headerKickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  countBadgeChip: {
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    borderColor: 'rgba(166, 106, 53, 0.3)',
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  countBadgeChipText: {
+    color: colors.amber,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  actionButtonSell: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.petroleum,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  actionButtonSellText: {
+    color: colors.gold,
     fontSize: 12,
     fontWeight: '800',
   },
