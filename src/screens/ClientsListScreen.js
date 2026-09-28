@@ -170,10 +170,10 @@ function ClientCard({ client, onPress, onEdit, onDelete, onNewSale }) {
           <Text style={styles.actionButtonSaleText}>Vender</Text>
         </Pressable>
         <Pressable onPress={onEdit} style={styles.actionIconBtn}>
-          <Feather name="edit-2" size={14} color={colors.ink} />
+          <Feather name="edit-2" size={14} color={colors.petroleum} />
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionIconBtnDark}>
-          <Feather name="trash-2" size={14} color={colors.rose} />
+          <Feather name="trash-2" size={14} color={colors.danger} />
         </Pressable>
       </View>
     </AnimatedPressable>
@@ -414,9 +414,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.md,
-    backgroundColor: colors.field,
+    backgroundColor: '#FAF7F2',
     borderWidth: 1,
-    borderColor: colors.lineStrong,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },

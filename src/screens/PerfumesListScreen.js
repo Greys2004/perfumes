@@ -244,7 +244,7 @@ export default function PerfumesListScreen({ navigation }) {
               }}
               style={styles.resetFiltersBtn}
             >
-              <Feather name="rotate-ccw" size={12} color={colors.ink} style={{ marginRight: 6 }} />
+              <Feather name="rotate-ccw" size={12} color={colors.petroleum} style={{ marginRight: 6 }} />
               <Text style={styles.resetFiltersBtnText}>Restablecer</Text>
             </Pressable>
           )}
@@ -404,7 +404,7 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete, onSell }) {
           <Text style={styles.actionButtonSellText}>Vender</Text>
         </Pressable>
         <Pressable onPress={onEdit} style={styles.actionButton}>
-          <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
+          <Feather name="edit-2" size={13} color={colors.petroleum} style={{ marginRight: 5 }} />
           <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionIconBtnDark}>

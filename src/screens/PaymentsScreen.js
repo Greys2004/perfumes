@@ -442,14 +442,14 @@ export default function PaymentsScreen() {
                             style={styles.actionMiniBtn}
                             scaleTo={0.9}
                           >
-                            <Feather name="edit-2" size={11} color={colors.ink} />
+                            <Feather name="edit-2" size={13} color={colors.petroleum} />
                           </AnimatedPressable>
                           <AnimatedPressable
                             onPress={() => handleDeletePayment(sale.id, payment.id)}
                             style={styles.actionMiniBtnDark}
                             scaleTo={0.9}
                           >
-                            <Feather name="trash-2" size={11} color={colors.textSubtle} />
+                            <Feather name="trash-2" size={13} color={colors.danger} />
                           </AnimatedPressable>
                         </View>
                       </View>
@@ -827,19 +827,19 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   actionMiniBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.xs,
-    backgroundColor: colors.field,
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: '#FAF7F2',
     borderWidth: 1,
-    borderColor: colors.lineStrong,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionMiniBtnDark: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.xs,
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
     backgroundColor: colors.dangerSurface,
     borderWidth: 1,
     borderColor: colors.dangerLine,

@@ -477,14 +477,14 @@ ${pricesText}
                       style={styles.priceMiniBtn}
                       scaleTo={0.9}
                     >
-                      <Feather name="edit-2" size={12} color={colors.ink} />
+                      <Feather name="edit-2" size={13} color={colors.petroleum} />
                     </AnimatedPressable>
                     <AnimatedPressable
                       onPress={() => handleDeletePrice(price)}
                       style={styles.priceMiniBtnDark}
                       scaleTo={0.9}
                     >
-                      <Feather name="eye-off" size={12} color={colors.textSubtle} />
+                      <Feather name="eye-off" size={13} color={colors.danger} />
                     </AnimatedPressable>
                   </View>
                 </View>
@@ -555,20 +555,20 @@ ${pricesText}
         <View style={styles.sectionHeaderBetween}>
           <View style={styles.sectionHeaderLeft}>
             <Feather name="database" size={16} color={colors.gold} />
-            <Text style={styles.sectionTitle}>Lotes & Frascos en Vault</Text>
+            <Text style={styles.sectionTitle} numberOfLines={1}>Lotes & Frascos</Text>
           </View>
           <AnimatedPressable
             onPress={() => setShowPurchaseDrawer((open) => !open)}
-            style={styles.toggleDrawerBtn}
+            style={[styles.toggleDrawerBtn, showPurchaseDrawer && styles.toggleDrawerBtnActive]}
             scaleTo={0.92}
           >
             <Feather
-              name={showPurchaseDrawer ? 'minus' : 'plus'}
+              name={showPurchaseDrawer ? 'x' : 'plus'}
               size={13}
-              color={colors.gold}
+              color={showPurchaseDrawer ? colors.danger : colors.gold}
             />
-            <Text style={styles.toggleDrawerBtnText}>
-              {showPurchaseDrawer ? 'Cerrar Registro' : 'Nueva Botella'}
+            <Text style={[styles.toggleDrawerBtnText, showPurchaseDrawer && { color: colors.danger }]}>
+              {showPurchaseDrawer ? 'Cerrar' : 'Nueva Botella'}
             </Text>
           </AnimatedPressable>
         </View>
@@ -1126,22 +1126,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+    gap: 8,
   },
   sectionHeaderLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginRight: 6,
   },
   toggleDrawerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: '#FAF7F2',
     borderWidth: 1,
     borderColor: 'rgba(166, 136, 100, 0.35)',
+    flexShrink: 0,
+  },
+  toggleDrawerBtnActive: {
+    backgroundColor: 'rgba(189, 83, 88, 0.1)',
+    borderColor: colors.danger,
   },
   toggleDrawerBtnText: {
     color: colors.text,
@@ -1212,18 +1220,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   priceMiniBtn: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: radius.xs,
-    backgroundColor: colors.gold,
+    backgroundColor: '#FAF7F2',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   priceMiniBtnDark: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: radius.xs,
-    backgroundColor: colors.surfaceSoft,
+    backgroundColor: colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
     alignItems: 'center',
     justifyContent: 'center',
   },
