@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors, radius, spacing } from '../theme';
 
 export default function FormInput({
@@ -15,13 +16,44 @@ export default function FormInput({
   autoCorrect,
   textContentType,
   rightElement,
+  leftIcon,
+  prefix,
+  helperText,
+  errorText,
 }) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.inputWrap}>
+      {!!label && (
+        <View style={styles.labelRow}>
+          <Text style={[styles.label, isFocused && styles.focusedLabel]}>{label}</Text>
+        </View>
+      )}
+      <View
+        style={[
+          styles.inputWrap,
+          isFocused && styles.focusedWrap,
+          !editable && styles.disabledWrap,
+          !!errorText && styles.errorWrap,
+        ]}
+      >
+        {!!leftIcon && (
+          <View style={styles.leftIconContainer}>
+            <Feather
+              name={leftIcon}
+              size={17}
+              color={isFocused ? colors.gold : colors.textSubtle}
+            />
+          </View>
+        )}
+        {!!prefix && (
+          <View style={styles.prefixContainer}>
+            <Text style={[styles.prefixText, isFocused && styles.prefixTextFocused]}>
+              {prefix}
+            </Text>
+          </View>
+        )}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -38,14 +70,15 @@ export default function FormInput({
           onBlur={() => setIsFocused(false)}
           style={[
             styles.input,
-            rightElement && styles.inputWithRightElement,
             multiline && styles.multiline,
-            isFocused && styles.focusedInput,
-            !editable && styles.disabledInput,
+            rightElement && styles.inputWithRightElement,
+            (leftIcon || prefix) && styles.inputWithLeftSpacing,
           ]}
         />
         {rightElement ? <View style={styles.rightElement}>{rightElement}</View> : null}
       </View>
+      {!!errorText && <Text style={styles.errorText}>{errorText}</Text>}
+      {!!helperText && !errorText && <Text style={styles.helperText}>{helperText}</Text>}
     </View>
   );
 }
@@ -54,48 +87,114 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
-  label: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '800',
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 6,
+  },
+  label: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  },
+  focusedLabel: {
+    color: colors.amber,
   },
   inputWrap: {
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    borderWidth: 1.2,
+    borderColor: 'rgba(166, 136, 100, 0.28)',
+    shadowColor: colors.petroleum,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  focusedWrap: {
+    borderColor: colors.gold,
+    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  disabledWrap: {
+    opacity: 0.6,
+    backgroundColor: colors.surfaceSoft,
+    borderColor: 'rgba(78, 85, 87, 0.15)',
+  },
+  errorWrap: {
+    borderColor: colors.danger,
+    borderWidth: 1.5,
+  },
+  leftIconContainer: {
+    paddingLeft: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  prefixContainer: {
+    paddingLeft: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  prefixText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textSubtle,
+  },
+  prefixTextFocused: {
+    color: colors.amber,
   },
   input: {
+    flex: 1,
     minHeight: 48,
-    borderRadius: radius.sm,
-    backgroundColor: colors.field,
-    borderWidth: 1,
-    borderColor: colors.line,
     color: colors.text,
     fontSize: 15,
+    fontWeight: '600',
     paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  inputWithLeftSpacing: {
+    paddingLeft: spacing.xs,
   },
   inputWithRightElement: {
-    paddingRight: 52,
+    paddingRight: 48,
   },
   rightElement: {
     position: 'absolute',
     top: 0,
     right: 0,
-    width: 52,
-    minHeight: 48,
+    bottom: 0,
+    width: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  focusedInput: {
-    borderColor: colors.gold,
-  },
-  disabledInput: {
-    opacity: 0.65,
-  },
   multiline: {
-    minHeight: 88,
-    paddingTop: spacing.sm,
+    minHeight: 96,
     textAlignVertical: 'top',
+    paddingTop: 12,
+  },
+  helperText: {
+    marginTop: 4,
+    fontSize: 11,
+    color: colors.textSubtle,
+    letterSpacing: 0.2,
+    paddingHorizontal: 2,
+  },
+  errorText: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.danger,
+    letterSpacing: 0.2,
+    paddingHorizontal: 2,
   },
 });

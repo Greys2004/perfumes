@@ -13,6 +13,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 
 import SearchBar from '../components/SearchBar';
+import AnimatedPressable from '../components/AnimatedPressable';
 import { colors, radius, spacing, shadow } from '../theme';
 import { listenActivePerfumes } from '../services/perfumesService';
 import { listenAllPresentationPrices } from '../services/presentationPricesService';
@@ -21,21 +22,21 @@ const typeLabels = {
   decant_3ml: '3 ml',
   decant_5ml: '5 ml',
   decant_10ml: '10 ml',
-  botella_completa: 'Botella completa',
+  botella_completa: 'Frasco',
 };
 
 const perfumeTypeFilters = [
   { label: 'Todos', value: 'all' },
-  { label: 'Diseñador', value: 'diseñador' },
   { label: 'Nicho', value: 'nicho' },
-  { label: 'Arabe', value: 'arabe' },
+  { label: 'Diseñador', value: 'diseñador' },
+  { label: 'Árabe', value: 'arabe' },
 ];
 
 const perfumeGenderFilters = [
   { label: 'Todos', value: 'all' },
-  { label: 'Mujer', value: 'mujer' },
-  { label: 'Hombre', value: 'hombre' },
   { label: 'Unisex', value: 'unisex' },
+  { label: 'Hombre', value: 'hombre' },
+  { label: 'Mujer', value: 'mujer' },
 ];
 
 function normalizeText(value) {
@@ -46,7 +47,7 @@ function normalizeText(value) {
     .trim();
 }
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const [perfumes, setPerfumes] = useState([]);
   const [prices, setPrices] = useState([]);
   const [search, setSearch] = useState('');
@@ -103,17 +104,19 @@ export default function HomeScreen() {
       return matchesSearch && matchesType && matchesGender && matchesBrand;
     });
   }, [perfumes, searchText, selectedBrand, selectedGender, selectedType]);
+
   const availableBrands = useMemo(() => {
     const brands = [...new Set(perfumes.map((perfume) => perfume.marca).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
     const normalizedBrandSearch = normalizeText(brandSearch);
 
     if (!normalizedBrandSearch) {
-      return brands.slice(0, 8);
+      return brands.slice(0, 10);
     }
 
-    return brands.filter((brand) => normalizeText(brand).includes(normalizedBrandSearch)).slice(0, 8);
+    return brands.filter((brand) => normalizeText(brand).includes(normalizedBrandSearch)).slice(0, 10);
   }, [brandSearch, perfumes]);
+
   const activeFiltersCount = [
     selectedType !== 'all',
     selectedGender !== 'all',
@@ -121,266 +124,314 @@ export default function HomeScreen() {
   ].filter(Boolean).length;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.heroPanel}>
-        <View style={styles.heroHeader}>
-          <View style={styles.heroTextBlock}>
-            <Text style={styles.kicker}>Catálogo AromaOrigen</Text>
-            <Text style={styles.title}>Perfumes Disponibles</Text>
-            <Text style={styles.subtitle}>
-              Explora aromas, marcas y descripciones olfativas de manera clara.
-            </Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Refined Luxury Header */}
+      <View style={styles.headerBlock}>
+        <View style={styles.headerTopRow}>
+          <View style={styles.brandTitleBlock}>
+            <Text style={styles.kicker}>HAUTE PARFUMERIE</Text>
+            <Text style={styles.mainTitle}>AromaOrigen</Text>
           </View>
-          <View style={styles.priceToggleContainer}>
-            <Text style={styles.priceToggleLabel}>Ver Precios</Text>
-            <Switch
-              value={showPrices}
-              onValueChange={setShowPrices}
-              trackColor={{ false: '#24262E', true: colors.gold }}
-              thumbColor={showPrices ? colors.text : colors.textSubtle}
-            />
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{filteredPerfumes.length} Fragancias</Text>
           </View>
         </View>
+        <Text style={styles.headerSubtitle}>
+          Colección privada de extractos, decants y fórmulas exclusivas.
+        </Text>
       </View>
 
+      {/* Modern Search Bar */}
       <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por aroma, marca, tipo, genero o nombre..."
+        placeholder="Buscar por nombre, casa, notas olfativas..."
       />
 
-      <Pressable onPress={() => setFiltersOpen((open) => !open)} style={styles.filterToggle}>
-        <View style={styles.filterToggleLeft}>
-          <Feather name="sliders" size={14} color={colors.gold} />
-          <Text style={styles.filterToggleText}>Filtros</Text>
-          {activeFiltersCount > 0 && (
-            <View style={styles.filterCountBadge}>
-              <Text style={styles.filterCountText}>{activeFiltersCount}</Text>
-            </View>
+      {/* Quick Category Chips Strip (Always visible and intuitive!) */}
+      <View style={styles.categoriesSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryChipsScroll}
+        >
+          {perfumeTypeFilters.map((filter) => {
+            const active = selectedType === filter.value;
+            return (
+              <AnimatedPressable
+                key={filter.value}
+                onPress={() => setSelectedType(filter.value)}
+                style={[styles.categoryChip, active && styles.categoryChipActive]}
+                scaleTo={0.94}
+              >
+                <Text style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>
+                  {filter.label}
+                </Text>
+              </AnimatedPressable>
+            );
+          })}
+
+          <View style={styles.filterDivider} />
+
+          {perfumeGenderFilters.map((filter) => {
+            const active = selectedGender === filter.value;
+            return (
+              <AnimatedPressable
+                key={filter.value}
+                onPress={() => setSelectedGender(filter.value)}
+                style={[styles.genderChip, active && styles.genderChipActive]}
+                scaleTo={0.94}
+              >
+                <Text style={[styles.genderChipText, active && styles.genderChipTextActive]}>
+                  {filter.label}
+                </Text>
+              </AnimatedPressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Brand Filter Drawer Toggle */}
+      <View style={styles.brandFilterRow}>
+        <AnimatedPressable
+          onPress={() => setFiltersOpen((o) => !o)}
+          style={styles.brandFilterToggle}
+          scaleTo={0.95}
+        >
+          <Feather name="sliders" size={13} color={colors.gold} />
+          <Text style={styles.brandFilterToggleText}>
+            {selectedBrand === 'all' ? 'Filtrar por Casa de Perfume' : `Marca: ${selectedBrand}`}
+          </Text>
+          {selectedBrand !== 'all' && (
+            <View style={styles.activeDot} />
           )}
-        </View>
-        <Feather name={filtersOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSubtle} />
-      </Pressable>
+          <Feather name={filtersOpen ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+        </AnimatedPressable>
 
+        {activeFiltersCount > 0 && (
+          <AnimatedPressable
+            onPress={() => {
+              setSelectedType('all');
+              setSelectedGender('all');
+              setSelectedBrand('all');
+              setSearch('');
+            }}
+            style={styles.clearBtn}
+            scaleTo={0.92}
+          >
+            <Feather name="rotate-ccw" size={11} color={colors.danger} />
+            <Text style={styles.clearBtnText}>Limpiar</Text>
+          </AnimatedPressable>
+        )}
+      </View>
+
+      {/* Collapsible Brands Drawer */}
       {filtersOpen && (
-        <View style={styles.filtersPanel}>
-          <Text style={styles.filterLabel}>Tipo de perfume</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
-            {perfumeTypeFilters.map((filter) => {
-              const selected = selectedType === filter.value;
-
-              return (
-                <Pressable
-                  key={filter.value}
-                  onPress={() => setSelectedType(filter.value)}
-                  style={[styles.filterChip, selected && styles.filterChipActive]}
-                >
-                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
-                    {filter.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={styles.filterLabel}>Genero</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
-            {perfumeGenderFilters.map((filter) => {
-              const selected = selectedGender === filter.value;
-
-              return (
-                <Pressable
-                  key={filter.value}
-                  onPress={() => setSelectedGender(filter.value)}
-                  style={[styles.filterChip, selected && styles.filterChipActive]}
-                >
-                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
-                    {filter.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={styles.filterLabel}>Marca</Text>
+        <View style={styles.brandsDrawer}>
           <SearchBar
             value={brandSearch}
             onChangeText={setBrandSearch}
             placeholder="Buscar marca..."
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandChipsScroll}>
             <Pressable
               onPress={() => setSelectedBrand('all')}
-              style={[styles.filterChip, selectedBrand === 'all' && styles.filterChipActive]}
+              style={[styles.brandChip, selectedBrand === 'all' && styles.brandChipActive]}
             >
-              <Text style={[styles.filterChipText, selectedBrand === 'all' && styles.filterChipTextActive]}>
+              <Text style={[styles.brandChipText, selectedBrand === 'all' && styles.brandChipTextActive]}>
                 Todas
               </Text>
             </Pressable>
             {availableBrands.map((brand) => {
-              const selected = selectedBrand === brand;
-
+              const active = selectedBrand === brand;
               return (
                 <Pressable
                   key={brand}
                   onPress={() => setSelectedBrand(brand)}
-                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                  style={[styles.brandChip, active && styles.brandChipActive]}
                 >
-                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                  <Text style={[styles.brandChipText, active && styles.brandChipTextActive]}>
                     {brand}
                   </Text>
                 </Pressable>
               );
             })}
           </ScrollView>
-
-          {activeFiltersCount > 0 && (
-            <Pressable
-              onPress={() => {
-                setSelectedType('all');
-                setSelectedGender('all');
-                setSelectedBrand('all');
-                setBrandSearch('');
-              }}
-              style={styles.clearFiltersButton}
-            >
-              <Feather name="x" size={13} color={colors.ink} />
-              <Text style={styles.clearFiltersText}>Limpiar filtros</Text>
-            </Pressable>
-          )}
         </View>
       )}
 
-      {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
+      {loading && <ActivityIndicator color={colors.amber} style={styles.loader} size="large" />}
 
       {!!error && (
-        <View style={styles.messageBox}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View style={styles.errorBanner}>
+          <Feather name="alert-circle" size={16} color={colors.danger} />
+          <Text style={styles.errorBannerText}>{error}</Text>
         </View>
       )}
 
       {!loading && !error && filteredPerfumes.length === 0 && (
-        <View style={styles.emptyPanel}>
-          <Feather name="info" size={24} color={colors.textSubtle} style={styles.emptyIcon} />
-          <Text style={styles.emptyText}>No encontramos perfumes que coincidan con tu búsqueda.</Text>
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyIconCircle}>
+            <Feather name="compass" size={26} color={colors.gold} />
+          </View>
+          <Text style={styles.emptyCardTitle}>Sin coincidencias</Text>
+          <Text style={styles.emptyCardSub}>
+            No encontramos fragancias con esos filtros. Prueba a limpiar los criterios.
+          </Text>
         </View>
       )}
 
-      {!loading &&
-        !error &&
-        filteredPerfumes.map((perfume) => (
-          <View key={perfume.id} style={styles.perfumeCard}>
-            <View style={styles.cardTop}>
-              {perfume.imagen ? (
-                <Pressable
-                  onPress={() => setExpandedImage(perfume)}
-                  style={styles.imageContainer}
-                >
-                  <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
-                </Pressable>
-              ) : (
-                <View style={styles.bottleMark}>
-                  <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
+      {/* Beautiful Fragrance Cards Stack */}
+      {!loading && !error && (
+        <View style={styles.cardsStack}>
+          {filteredPerfumes.map((perfume) => {
+            const perfumePrices = prices.filter((p) => p.perfume_id === perfume.id);
+
+            return (
+              <View key={perfume.id} style={styles.fragranceCard}>
+                {/* Visual Area */}
+                <View style={styles.cardHeaderArea}>
+                  <Pressable
+                    onPress={() => perfume.imagen && setExpandedImage(perfume)}
+                    style={styles.imageWrapper}
+                  >
+                    {perfume.imagen ? (
+                      <Image source={{ uri: perfume.imagen }} style={styles.bottleImage} resizeMode="contain" />
+                    ) : (
+                      <View style={styles.imageFallback}>
+                        <Feather name="droplet" size={28} color={colors.gold} />
+                        <Text style={styles.imageFallbackLetter}>
+                          {perfume.nombre?.charAt(0) || 'A'}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+
+                  <View style={styles.headerInfo}>
+                    <Text style={styles.cardBrand}>{perfume.marca?.toUpperCase() || 'ALTA GAMA'}</Text>
+                    <Text style={styles.cardPerfumeTitle}>{perfume.nombre}</Text>
+
+                    <View style={styles.badgesRow}>
+                      {!!perfume.categoria_perfume && (
+                        <View style={styles.tagBadge}>
+                          <Text style={styles.tagBadgeText}>{perfume.categoria_perfume.toUpperCase()}</Text>
+                        </View>
+                      )}
+                      {!!perfume.genero_perfume && (
+                        <View style={styles.genderTag}>
+                          <Text style={styles.genderTagText}>{perfume.genero_perfume}</Text>
+                        </View>
+                      )}
+                      {!!perfume.duracion && (
+                        <View style={styles.durationTag}>
+                          <Feather name="clock" size={10} color={colors.textSubtle} />
+                          <Text style={styles.durationTagText}>{perfume.duracion}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {!!perfume.descripcion_olor && (
+                      <Text style={styles.scentDescription} numberOfLines={2}>
+                        {perfume.descripcion_olor}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              )}
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle}>{perfume.nombre}</Text>
-                <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
-                {!!perfume.categoria_perfume && (
-                  <Text style={styles.cardCategory}>{perfume.categoria_perfume}</Text>
-                )}
-                {!!perfume.genero_perfume && (
-                  <Text style={styles.cardCategory}>{perfume.genero_perfume}</Text>
-                )}
-                {!!perfume.duracion && (
-                  <View style={styles.duracionRow}>
-                    <Feather name="clock" size={12} color={colors.gold} />
-                    <Text style={styles.duracionText}>{perfume.duracion}</Text>
+
+                {/* Olfactory Notes Preview */}
+                {(!!perfume.notas_salida || !!perfume.notas_corazon || !!perfume.notas_fondo) && (
+                  <View style={styles.notesSummaryBox}>
+                    {!!perfume.notas_salida && (
+                      <View style={styles.noteItem}>
+                        <Text style={styles.noteLabel}>Salida:</Text>
+                        <Text style={styles.noteValue} numberOfLines={1}>{perfume.notas_salida}</Text>
+                      </View>
+                    )}
+                    {!!perfume.notas_corazon && (
+                      <View style={styles.noteItem}>
+                        <Text style={styles.noteLabel}>Cuerpo:</Text>
+                        <Text style={styles.noteValue} numberOfLines={1}>{perfume.notas_corazon}</Text>
+                      </View>
+                    )}
+                    {!!perfume.notas_fondo && (
+                      <View style={styles.noteItem}>
+                        <Text style={styles.noteLabel}>Fondo:</Text>
+                        <Text style={styles.noteValue} numberOfLines={1}>{perfume.notas_fondo}</Text>
+                      </View>
+                    )}
                   </View>
                 )}
-              </View>
-            </View>
 
-            {!!perfume.descripcion_olor && (
-              <Text style={styles.description}>{perfume.descripcion_olor}</Text>
-            )}
+                {/* Decant Presentation Prices Pills */}
+                {perfumePrices.length > 0 && (
+                  <View style={styles.pricesSection}>
+                    <Text style={styles.pricesSectionLabel}>PRESENTACIONES DISPONIBLES</Text>
+                    <View style={styles.pricePillsRow}>
+                      {perfumePrices.map((price) => (
+                        <View key={price.id} style={styles.pricePill}>
+                          <Text style={styles.pricePillSize}>
+                            {typeLabels[price.tipo] || `${price.ml}ml`}
+                          </Text>
+                          <Text style={styles.pricePillAmount}>
+                            ${price.precio_publico}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
 
-            <View style={styles.infoGrid}>
-              {!!perfume.notas_salida && (
-                <InfoRow icon="wind" label="Notas de Salida" value={perfume.notas_salida} />
-              )}
-              {!!perfume.notas_corazon && (
-                <InfoRow icon="heart" label="Notas de Corazón" value={perfume.notas_corazon} />
-              )}
-              {!!perfume.notas_fondo && (
-                <InfoRow icon="arrow-down" label="Notas de Fondo" value={perfume.notas_fondo} />
-              )}
-            </View>
+                {/* Card Actions */}
+                <View style={styles.cardActionsRow}>
+                  <AnimatedPressable
+                    onPress={() => navigation.navigate('PerfumeDetail', { perfume })}
+                    style={styles.cardDetailBtn}
+                    scaleTo={0.95}
+                  >
+                    <Feather name="layers" size={13} color={colors.text} />
+                    <Text style={styles.cardDetailBtnText}>Ver Ficha Completa & Stock</Text>
+                  </AnimatedPressable>
 
-            {showPrices && prices.some((price) => price.perfume_id === perfume.id) && (
-              <View style={styles.priceSection}>
-                <Text style={styles.priceSectionTitle}>Presentaciones & Precios</Text>
-                <View style={styles.priceStrip}>
-                  {prices
-                    .filter((price) => price.perfume_id === perfume.id)
-                    .map((price) => (
-                      <PricePill
-                        key={price.id}
-                        label={typeLabels[price.tipo] || price.tipo}
-                        value={`$${price.precio_publico}`}
-                      />
-                    ))}
+                  <AnimatedPressable
+                    onPress={() => navigation.navigate('SaleForm', { perfumeId: perfume.id })}
+                    style={styles.cardQuickSaleBtn}
+                    scaleTo={0.95}
+                  >
+                    <Feather name="plus-circle" size={14} color="#FFFFFF" />
+                    <Text style={styles.cardQuickSaleBtnText}>Vender</Text>
+                  </AnimatedPressable>
                 </View>
               </View>
-            )}
-          </View>
-        ))}
-      <Modal
-        visible={!!expandedImage}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setExpandedImage(null)}
-      >
-        <View style={styles.imageModalOverlay}>
-          <Pressable style={styles.imageModalBackdrop} onPress={() => setExpandedImage(null)} />
-          <View style={styles.imageModalContent}>
-            <View style={styles.imageModalHeader}>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Expanded Image Modal */}
+      <Modal visible={!!expandedImage} transparent animationType="fade" onRequestClose={() => setExpandedImage(null)}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setExpandedImage(null)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.imageModalTitle}>{expandedImage?.nombre}</Text>
-                <Text style={styles.imageModalSubtitle}>{expandedImage?.marca || 'Marca Exclusiva'}</Text>
+                <Text style={styles.modalBrand}>{expandedImage?.marca?.toUpperCase()}</Text>
+                <Text style={styles.modalTitle}>{expandedImage?.nombre}</Text>
               </View>
-              <Pressable onPress={() => setExpandedImage(null)} style={styles.imageModalClose}>
-                <Feather name="x" size={18} color={colors.ink} />
+              <Pressable onPress={() => setExpandedImage(null)} style={styles.modalCloseBtn}>
+                <Feather name="x" size={16} color={colors.ink} />
               </Pressable>
             </View>
             {!!expandedImage?.imagen && (
-              <Image source={{ uri: expandedImage.imagen }} style={styles.expandedImage} />
+              <Image source={{ uri: expandedImage.imagen }} style={styles.modalImage} resizeMode="contain" />
             )}
           </View>
         </View>
       </Modal>
     </ScrollView>
-  );
-}
-
-function InfoRow({ icon, label, value }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabelBlock}>
-        <Feather name={icon} size={13} color={colors.gold} style={styles.infoIcon} />
-        <Text style={styles.infoLabel}>{label}</Text>
-      </View>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
-function PricePill({ label, value }) {
-  return (
-    <View style={styles.pricePill}>
-      <Text style={styles.priceLabel}>{label}</Text>
-      <Text style={styles.priceValue}>{value}</Text>
-    </View>
   );
 }
 
@@ -391,394 +442,505 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 40,
+    paddingBottom: 110, // Safe padding for bottom luxury dock
   },
-  heroPanel: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.lg,
+
+  // Refined Header Block
+  headerBlock: {
     marginBottom: spacing.md,
-    ...shadow.card,
+    paddingTop: 4,
   },
-  heroHeader: {
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
-  heroTextBlock: {
+  brandTitleBlock: {
     flex: 1,
   },
   kicker: {
     color: colors.gold,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
+    letterSpacing: 2,
+    marginBottom: 2,
   },
-  title: {
+  mainTitle: {
     color: colors.text,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
-    marginBottom: 6,
     letterSpacing: -0.5,
   },
-  subtitle: {
-    color: colors.textSubtle,
+  countBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.3)',
+    ...shadow.card,
+  },
+  countBadgeText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  headerSubtitle: {
+    color: colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
+    marginTop: 4,
   },
-  priceToggleContainer: {
+
+  // Categories Strip
+  categoriesSection: {
+    marginBottom: 10,
+  },
+  categoryChipsScroll: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: colors.line,
+    gap: 8,
+    paddingVertical: 4,
   },
-  priceToggleLabel: {
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+    ...shadow.card,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
+  },
+  categoryChipText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  categoryChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+  filterDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: 'rgba(166, 136, 100, 0.3)',
+    marginHorizontal: 4,
+  },
+  genderChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.2)',
+  },
+  genderChipActive: {
+    backgroundColor: colors.amber,
+    borderColor: colors.amber,
+  },
+  genderChipText: {
     color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    fontSize: 12,
+    fontWeight: '700',
   },
-  filterToggle: {
-    minHeight: 42,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.sm,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
+  genderChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+
+  // Brand Filter Toggle Row
+  brandFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
-  filterToggleLeft: {
+  brandFilterToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-  },
-  filterToggleText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  filterCountBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-  },
-  filterCountText: {
-    color: colors.ink,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  filtersPanel: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.lineStrong,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+  },
+  brandFilterToggleText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.amber,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  clearBtnText: {
+    color: colors.danger,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  brandsDrawer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
     marginBottom: spacing.md,
     ...shadow.card,
   },
-  filterLabel: {
-    color: colors.gold,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
+  brandChipsScroll: {
+    gap: 8,
+    paddingVertical: 4,
   },
-  filterChipRow: {
-    gap: 6,
-    paddingBottom: spacing.sm,
-  },
-  filterChip: {
-    minHeight: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+  brandChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSoft,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(166, 136, 100, 0.2)',
+  },
+  brandChipActive: {
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
+  },
+  brandChipText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  brandChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+
+  // Fragrance Cards Stack
+  cardsStack: {
+    gap: 14,
+  },
+  fragranceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.22)',
+    ...shadow.card,
+  },
+  cardHeaderArea: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  imageWrapper: {
+    width: 90,
+    height: 105,
+    borderRadius: radius.md,
+    backgroundColor: '#FAF7F2',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    overflow: 'hidden',
   },
-  filterChipActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+  bottleImage: {
+    width: '100%',
+    height: '100%',
   },
-  filterChipText: {
-    color: colors.textSubtle,
-    fontSize: 12,
+  imageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageFallbackLetter: {
+    color: colors.gold,
+    fontSize: 13,
     fontWeight: '900',
+    marginTop: 2,
   },
-  filterChipTextActive: {
-    color: colors.ink,
+  headerInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  clearFiltersButton: {
-    alignSelf: 'flex-start',
-    minHeight: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+  cardBrand: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  cardPerfumeTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  },
+  tagBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+  },
+  tagBadgeText: {
+    color: colors.amber,
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  genderTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    backgroundColor: colors.surfaceSoft,
+  },
+  genderTagText: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  durationTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    backgroundColor: colors.surfaceSoft,
+  },
+  durationTagText: {
+    color: colors.textSubtle,
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  scentDescription: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  // Notes Summary Box
+  notesSummaryBox: {
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.md,
+    padding: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.15)',
+    gap: 4,
+  },
+  noteItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    marginTop: spacing.xs,
   },
-  clearFiltersText: {
-    color: colors.ink,
+  noteLabel: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: '800',
+    width: 44,
+  },
+  noteValue: {
+    color: colors.text,
+    fontSize: 11,
+    flex: 1,
+  },
+
+  // Presentations / Prices Section
+  pricesSection: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(166, 136, 100, 0.15)',
+  },
+  pricesSectionLabel: {
+    color: colors.textSubtle,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  pricePillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  pricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+  },
+  pricePillSize: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  pricePillAmount: {
+    color: colors.amber,
     fontSize: 12,
     fontWeight: '900',
   },
+
+  // Card Actions
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  cardDetailBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.pill,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.3)',
+  },
+  cardDetailBtnText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  cardQuickSaleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.amber,
+    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    ...shadow.amberGlow,
+  },
+  cardQuickSaleBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  // States
   loader: {
     marginTop: 36,
   },
-  messageBox: {
-    backgroundColor: colors.dangerSurface,
-    borderColor: colors.dangerLine,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(189, 83, 88, 0.1)',
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  errorText: {
+  errorBannerText: {
     color: colors.danger,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
+    flex: 1,
   },
-  emptyPanel: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
     padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.2)',
+    ...shadow.card,
   },
-  emptyIcon: {
-    marginBottom: spacing.sm,
+  emptyIconCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FAF7F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
   },
-  emptyText: {
-    color: colors.textSubtle,
-    fontSize: 14,
+  emptyCardTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  emptyCardSub: {
+    color: colors.textMuted,
+    fontSize: 12,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 17,
   },
-  perfumeCard: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+
+  // Image Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(22, 50, 58, 0.85)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    borderColor: colors.gold,
     ...shadow.card,
   },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  imageContainer: {
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    borderRadius: radius.sm,
-    padding: 2,
-  },
-  cardImage: {
-    width: 62,
-    height: 74,
-    borderRadius: radius.sm - 2,
-    backgroundColor: colors.background,
-  },
-  bottleMark: {
-    width: 62,
-    height: 74,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.glow,
-  },
-  bottleText: {
-    color: colors.ink,
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  cardBrand: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  cardCategory: {
-    color: colors.textSubtle,
-    fontSize: 11,
-    fontWeight: '900',
-    marginTop: 3,
-    textTransform: 'uppercase',
-  },
-  duracionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-  },
-  duracionText: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  description: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: spacing.md,
-    fontStyle: 'italic',
-  },
-  infoGrid: {
-    marginTop: spacing.md,
-    gap: 6,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lineSoft,
-    paddingVertical: 5,
-  },
-  infoLabelBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 120,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  infoLabel: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  infoValue: {
-    color: colors.textMuted,
-    fontSize: 13,
-    flex: 1,
-    textAlign: 'right',
-  },
-  priceSection: {
-    marginTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingTop: spacing.md,
-  },
-  priceSectionTitle: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  priceStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  pricePill: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    flex: 1,
-    minWidth: 110,
-  },
-  priceLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  priceValue: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  imageModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(5, 5, 8, 0.82)',
-    justifyContent: 'center',
-    padding: spacing.md,
-  },
-  imageModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  imageModalContent: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    padding: spacing.md,
-    ...shadow.card,
-  },
-  imageModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
     marginBottom: spacing.md,
   },
-  imageModalTitle: {
+  modalBrand: {
+    color: colors.goldDark,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  modalTitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
   },
-  imageModalSubtitle: {
-    color: colors.gold,
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  imageModalClose: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.glow,
   },
-  expandedImage: {
+  modalImage: {
     width: '100%',
-    aspectRatio: 1,
-    borderRadius: radius.sm,
-    backgroundColor: colors.background,
+    height: 300,
+    borderRadius: radius.md,
   },
 });

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 
 import FormInput from '../components/FormInput';
@@ -35,14 +36,14 @@ const initialForm = {
 };
 
 const perfumeCategories = [
-  { label: 'Diseñador', value: 'diseñador' },
-  { label: 'Nicho', value: 'nicho' },
-  { label: 'Arabe', value: 'arabe' },
+  { label: 'Diseñador', value: 'diseñador', icon: 'award' },
+  { label: 'Nicho', value: 'nicho', icon: 'star' },
+  { label: 'Árabe', value: 'arabe', icon: 'compass' },
 ];
 
 const perfumeGenders = [
-  { label: 'Mujer', value: 'mujer' },
-  { label: 'Hombre', value: 'hombre' },
+  { label: 'Femenino', value: 'mujer' },
+  { label: 'Masculino', value: 'hombre' },
   { label: 'Unisex', value: 'unisex' },
 ];
 
@@ -85,7 +86,7 @@ export default function PerfumeFormScreen({ navigation, route }) {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert('Permiso necesario', 'Necesitamos acceso a tu galería para elegir una imagen.');
+      Alert.alert('Permiso necesario', 'Necesitamos acceso a tu galería para elegir una fotografía del frasco.');
       return;
     }
 
@@ -93,7 +94,7 @@ export default function PerfumeFormScreen({ navigation, route }) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 0.8,
     });
 
     if (result.canceled) {
@@ -129,7 +130,7 @@ export default function PerfumeFormScreen({ navigation, route }) {
       setImagenLocal('');
       navigation.goBack();
     } catch (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      Alert.alert('No se pudo guardar la fragancia', error.message);
     } finally {
       setSaving(false);
       setSubiendoImagen(false);
@@ -142,72 +143,119 @@ export default function PerfumeFormScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={90}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.kicker}>{editingPerfume ? 'Edición de Fragancia' : 'Nueva Fragancia'}</Text>
-        <Text style={styles.title}>{editingPerfume ? 'Editar Perfume' : 'Registrar Perfume'}</Text>
-        <Text style={styles.subtitle}>
-          Ingresa la información básica y descriptores olfativos. Posteriormente, podrás registrar lotes de stock y asignar precios por ml.
-        </Text>
+        {/* Header Block */}
+        <View style={styles.headerBlock}>
+          <View style={styles.headerIconWrap}>
+            <Feather name="droplet" size={24} color={colors.amber} />
+          </View>
+          <Text style={styles.kicker}>
+            {editingPerfume ? 'EDICIÓN DE FÓRMULA' : 'CREACIÓN PRIVÉE'}
+          </Text>
+          <Text style={styles.title}>
+            {editingPerfume ? 'Editar Fragancia' : 'Nueva Fragancia'}
+          </Text>
+          <Text style={styles.subtitle}>
+            Configura las propiedades sensoriales, casa perfumista y descriptores olfativos para el catálogo.
+          </Text>
+        </View>
 
-        <View style={styles.formPanel}>
+        {/* Section: Fotografía del Frasco */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconBadge}>
+              <Feather name="camera" size={15} color={colors.gold} />
+            </View>
+            <Text style={styles.sectionTitle}>Fotografía de la Botella</Text>
+          </View>
+
           <Pressable
             onPress={handlePickImage}
             disabled={disableActions}
-            style={styles.imagePicker}
+            style={styles.imagePickerFrame}
           >
             {previewUri ? (
-              <Image source={{ uri: previewUri }} style={styles.previewImage} />
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: previewUri }} style={styles.previewImage} resizeMode="cover" />
+                <View style={styles.changeImageOverlay}>
+                  <Feather name="edit-2" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.changeImageText}>Cambiar Fotografía</Text>
+                </View>
+              </View>
             ) : (
               <View style={styles.imagePlaceholder}>
-                <View style={styles.placeholderIcon}>
-                  <Feather name="image" size={22} color={colors.ink} />
-                </View>
-                <Text style={styles.placeholderTitle}>Seleccionar imagen</Text>
-                <Text style={styles.placeholderText}>Galeria del telefono</Text>
+                <LinearGradient
+                  colors={['rgba(166, 136, 100, 0.2)', 'rgba(166, 136, 100, 0.05)']}
+                  style={styles.placeholderIconRing}
+                >
+                  <Feather name="image" size={28} color={colors.gold} />
+                </LinearGradient>
+                <Text style={styles.placeholderTitle}>Seleccionar de Galería</Text>
+                <Text style={styles.placeholderSub}>Toca aquí para subir la foto del frasco</Text>
               </View>
             )}
           </Pressable>
-          <PrimaryButton
-            title={imagenLocal ? 'Cambiar Imagen Seleccionada' : 'Elegir Imagen de Galeria'}
-            onPress={handlePickImage}
-            disabled={disableActions}
-            variant="secondary"
-          />
-          <View style={styles.imageSpace} />
-          
+
           <FormInput
-            label="Nombre del Perfume"
+            label="O ingresar URL directa de imagen web"
+            value={form.imagen}
+            onChangeText={(value) => updateField('imagen', value)}
+            placeholder="https://images.unsplash.com/..."
+            autoCapitalize="none"
+            leftIcon="link"
+          />
+        </View>
+
+        {/* Section: Identidad de la Fragancia */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconBadge}>
+              <Feather name="tag" size={15} color={colors.amber} />
+            </View>
+            <Text style={styles.sectionTitle}>Identidad & Casa Perfumista</Text>
+          </View>
+
+          <FormInput
+            label="Nombre de la Fragancia *"
             value={form.nombre}
             onChangeText={(value) => updateField('nombre', value)}
-            placeholder="Ej. Sauvage"
-          />
-          
-          <FormInput
-            label="Marca / Diseñador"
-            value={form.marca}
-            onChangeText={(value) => updateField('marca', value)}
-            placeholder="Ej. Dior"
+            placeholder="Ej. Baccarat Rouge 540"
+            leftIcon="bookmark"
           />
 
-          <Text style={styles.fieldLabel}>Tipo de perfume</Text>
+          <FormInput
+            label="Casa / Marca *"
+            value={form.marca}
+            onChangeText={(value) => updateField('marca', value)}
+            placeholder="Ej. Maison Francis Kurkdjian"
+            leftIcon="briefcase"
+          />
+
+          {/* Categoría Selector */}
+          <Text style={styles.segmentLabel}>CATEGORÍA DE PERFUMERÍA</Text>
           <View style={styles.segmentRow}>
             {perfumeCategories.map((category) => {
               const selected = form.categoria_perfume === category.value;
-
               return (
                 <Pressable
                   key={category.value}
                   onPress={() => updateField('categoria_perfume', category.value)}
-                  style={[styles.segment, selected && styles.segmentActive]}
+                  style={[styles.segmentBtn, selected && styles.segmentBtnActive]}
                 >
-                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                  <Feather
+                    name={category.icon}
+                    size={14}
+                    color={selected ? '#FFFFFF' : colors.textMuted}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.segmentBtnText, selected && styles.segmentBtnTextActive]}>
                     {category.label}
                   </Text>
                 </Pressable>
@@ -215,104 +263,127 @@ export default function PerfumeFormScreen({ navigation, route }) {
             })}
           </View>
 
-          <Text style={styles.fieldLabel}>Genero</Text>
+          {/* Género Selector */}
+          <Text style={styles.segmentLabel}>PÚBLICO OBJETIVO / GÉNERO</Text>
           <View style={styles.segmentRow}>
             {perfumeGenders.map((gender) => {
               const selected = form.genero_perfume === gender.value;
-
               return (
                 <Pressable
                   key={gender.value}
                   onPress={() => updateField('genero_perfume', gender.value)}
-                  style={[styles.segment, selected && styles.segmentActive]}
+                  style={[styles.segmentBtn, selected && styles.segmentBtnActive]}
                 >
-                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                  <Text style={[styles.segmentBtnText, selected && styles.segmentBtnTextActive]}>
                     {gender.label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
-          
+
           <FormInput
-            label="Enlace de Imagen (URL alternativa)"
-            value={form.imagen}
-            onChangeText={(value) => updateField('imagen', value)}
-            placeholder="Enlace web opcional"
-          />
-          
-          <FormInput
-            label="Descripción del Aroma"
+            label="Descripción Sensorial & Acuerdos Principales"
             value={form.descripcion_olor}
             onChangeText={(value) => updateField('descripcion_olor', value)}
-            placeholder="Ej. Fresco, especiado, notas cítricas y amaderadas"
+            placeholder="Aroma envolvente, ámbar gris luminoso, cedro majestuoso y acordes azafranados de alta densidad..."
             multiline
           />
-          
-          <FormInput
-            label="Longevidad / Duración estimada"
-            value={form.duracion}
-            onChangeText={(value) => updateField('duracion', value)}
-            placeholder="Ej. 8 a 10 horas"
-          />
-          
-          <FormInput
-            label="Capacidad Botella Completa (ml)"
-            value={form.ml_botella_completa}
-            onChangeText={(value) => updateField('ml_botella_completa', value)}
-            placeholder="Ej. 100"
-            keyboardType="numeric"
-          />
-          
-          <FormInput
-            label="Precio de referencia (Liverpool)"
-            value={form.precio_liverpool}
-            onChangeText={(value) => updateField('precio_liverpool', value)}
-            placeholder="Ej. 3200"
-            keyboardType="numeric"
-          />
+        </View>
 
-          <View style={styles.formSectionDivider}>
-            <Feather name="wind" size={13} color={colors.gold} />
-            <Text style={styles.sectionHeading}>Pirámide Olfativa</Text>
+        {/* Section: Pirámide Olfativa */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconBadge}>
+              <Feather name="layers" size={15} color={colors.gold} />
+            </View>
+            <Text style={styles.sectionTitle}>Pirámide Olfativa</Text>
           </View>
-          
+
           <FormInput
-            label="Notas de Salida (Primer impacto)"
+            label="Notas de Salida (Apertura · Primeros 15 min)"
             value={form.notas_salida}
             onChangeText={(value) => updateField('notas_salida', value)}
-            placeholder="Ej. Bergamota de Calabria, Pimienta de Sichuan"
-          />
-          
-          <FormInput
-            label="Notas de Corazón (Cuerpo del aroma)"
-            value={form.notas_corazon}
-            onChangeText={(value) => updateField('notas_corazon', value)}
-            placeholder="Ej. Lavanda, Vetiver, Pachulí"
-          />
-          
-          <FormInput
-            label="Notas de Fondo (Base que perdura)"
-            value={form.notas_fondo}
-            onChangeText={(value) => updateField('notas_fondo', value)}
-            placeholder="Ej. Ambroxan, Cedro, Ládano"
+            placeholder="Ej. Jazmín grandiflorum, Azafrán de Persia"
+            leftIcon="sun"
           />
 
-          <View style={{ marginTop: spacing.md }}>
-            <PrimaryButton
-              title={
-                subiendoImagen
-                  ? 'Subiendo imagen...'
-                  : saving
-                    ? 'Guardando...'
-                    : editingPerfume
-                      ? 'Actualizar Informacion'
-                      : 'Registrar Perfume'
-              }
-              onPress={handleSave}
-              disabled={disableActions}
-            />
+          <FormInput
+            label="Notas de Corazón (Cuerpo · Evolución)"
+            value={form.notas_corazon}
+            onChangeText={(value) => updateField('notas_corazon', value)}
+            placeholder="Ej. Almendra amarga de Marruecos, Madera de cedro"
+            leftIcon="feather"
+          />
+
+          <FormInput
+            label="Notas de Fondo (Base · Fijación duradera)"
+            value={form.notas_fondo}
+            onChangeText={(value) => updateField('notas_fondo', value)}
+            placeholder="Ej. Ámbar gris amaderado, Almizcle cálido"
+            leftIcon="shield"
+          />
+        </View>
+
+        {/* Section: Datos Técnicos y Mercado */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconBadge}>
+              <Feather name="sliders" size={15} color={colors.copper} />
+            </View>
+            <Text style={styles.sectionTitle}>Especificaciones & Mercado</Text>
           </View>
+
+          <View style={styles.twoColumnRow}>
+            <View style={{ flex: 1, marginRight: spacing.sm }}>
+              <FormInput
+                label="Capacidad (ml)"
+                value={form.ml_botella_completa}
+                onChangeText={(value) => updateField('ml_botella_completa', value)}
+                placeholder="100"
+                keyboardType="numeric"
+                prefix="ml"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <FormInput
+                label="Precio Departamental"
+                value={form.precio_liverpool}
+                onChangeText={(value) => updateField('precio_liverpool', value)}
+                placeholder="6800"
+                keyboardType="numeric"
+                prefix="$"
+              />
+            </View>
+          </View>
+
+          <FormInput
+            label="Longevidad / Duración Estimada en Piel"
+            value={form.duracion}
+            onChangeText={(value) => updateField('duracion', value)}
+            placeholder="Ej. 10 a 14 horas con estela moderada"
+            leftIcon="clock"
+          />
+        </View>
+
+        {/* Action Button */}
+        <View style={styles.submitWrapper}>
+          <PrimaryButton
+            title={
+              subiendoImagen
+                ? 'Subiendo imagen a la nube...'
+                : saving
+                  ? 'Guardando fragancia...'
+                  : editingPerfume
+                    ? 'Guardar Modificaciones'
+                    : 'Añadir al Catálogo'
+            }
+            onPress={handleSave}
+            disabled={disableActions}
+            loading={disableActions}
+            icon={editingPerfume ? 'check-circle' : 'plus-circle'}
+            variant="primary"
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -326,137 +397,178 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 80,
+    paddingBottom: 110,
+  },
+  headerBlock: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    paddingTop: 8,
+  },
+  headerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    borderWidth: 1.5,
+    borderColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    ...shadow.amberGlow,
   },
   kicker: {
-    color: colors.gold,
+    color: colors.amber,
     fontSize: 11,
     fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 2,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
   subtitle: {
     color: colors.textSubtle,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    paddingHorizontal: 16,
   },
-  formPanel: {
+  sectionCard: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
+    borderColor: 'rgba(166, 136, 100, 0.28)',
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     ...shadow.card,
   },
-  imagePicker: {
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    borderRadius: radius.md,
-    padding: 3,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.md,
-    minHeight: 220,
-    backgroundColor: colors.surfaceRaised,
-    ...shadow.glow,
+  },
+  sectionIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(166, 136, 100, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  imagePickerFrame: {
+    height: 180,
+    borderRadius: radius.md,
+    backgroundColor: '#FAF8F4',
+    borderWidth: 1.5,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
   },
   previewImage: {
     width: '100%',
-    height: 220,
-    borderRadius: radius.md - 3,
-    backgroundColor: colors.backgroundSoft,
+    height: '100%',
+  },
+  changeImageOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(22, 50, 58, 0.85)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  changeImageText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
   imagePlaceholder: {
-    minHeight: 220,
-    borderRadius: radius.md - 3,
-    backgroundColor: colors.backgroundSoft,
-    borderWidth: 1,
-    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.md,
   },
-  placeholderIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+  placeholderIconRing: {
+    width: 58,
+    height: 58,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
-    ...shadow.glow,
+    marginBottom: 8,
   },
   placeholderTitle: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 3,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
   },
-  placeholderText: {
+  placeholderSub: {
     color: colors.textSubtle,
     fontSize: 12,
-    fontWeight: '700',
   },
-  imageSpace: {
-    height: 12,
-  },
-  fieldLabel: {
-    color: colors.textMuted,
+  segmentLabel: {
+    color: colors.text,
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: spacing.xs,
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
   segmentRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  segment: {
+  segmentBtn: {
     flex: 1,
-    minHeight: 38,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 42,
+    borderRadius: radius.md,
+    backgroundColor: '#FAF8F4',
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  segmentActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    ...shadow.glow,
-  },
-  segmentText: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  segmentTextActive: {
-    color: colors.ink,
-  },
-  formSectionDivider: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.lineSoft,
-    paddingTop: spacing.md,
+    paddingHorizontal: 4,
   },
-  sectionHeading: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  segmentBtnActive: {
+    backgroundColor: colors.petroleum,
+    borderColor: colors.gold,
+  },
+  segmentBtnText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  segmentBtnTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  twoColumnRow: {
+    flexDirection: 'row',
+  },
+  submitWrapper: {
+    marginTop: spacing.sm,
   },
 });

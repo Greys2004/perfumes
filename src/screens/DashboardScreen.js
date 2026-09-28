@@ -3,7 +3,6 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { Feather } from '@expo/vector-icons';
 
 import { colors, radius, spacing, shadow } from '../theme';
-import AnimatedPressable from '../components/AnimatedPressable';
 import CalendarDatePicker from '../components/CalendarDatePicker';
 import {
   calculateDashboardData,
@@ -182,6 +181,7 @@ export default function DashboardScreen() {
   const [data, setData] = useState(initialData);
   const [period, setPeriod] = useState('month');
   const [periodAnchor, setPeriodAnchor] = useState(() => new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState('');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(18)).current;
@@ -264,6 +264,7 @@ export default function DashboardScreen() {
     (sum, item) => sum + (Number(item.ml_restantes) || 0),
     0
   );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Animated.View
@@ -275,6 +276,7 @@ export default function DashboardScreen() {
           },
         ]}
       >
+        {/* Panel Hero */}
         <View style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={styles.heroTitleBlock}>
@@ -288,6 +290,7 @@ export default function DashboardScreen() {
             </View>
           </View>
 
+          {/* Period Tabs */}
           <View style={styles.periodTabs}>
             {periodOptions.map((option) => (
               <Pressable
@@ -310,12 +313,13 @@ export default function DashboardScreen() {
             ))}
           </View>
 
+          {/* Navegador de Periodos */}
           <View style={styles.periodNavigator}>
             <Pressable
               onPress={() => setPeriodAnchor((currentDate) => addPeriod(currentDate, period, -1))}
               style={styles.periodStepButton}
             >
-              <Feather name="chevron-left" size={16} color={colors.text} />
+              <Feather name="chevron-left" size={18} color={colors.gold} />
             </Pressable>
             <Pressable onPress={() => setPeriodAnchor(new Date())} style={styles.periodCurrentButton}>
               <Text style={styles.periodCurrentText}>{periodLabel}</Text>
@@ -324,19 +328,37 @@ export default function DashboardScreen() {
               onPress={() => setPeriodAnchor((currentDate) => addPeriod(currentDate, period, 1))}
               style={styles.periodStepButton}
             >
-              <Feather name="chevron-right" size={16} color={colors.text} />
+              <Feather name="chevron-right" size={18} color={colors.gold} />
             </Pressable>
           </View>
 
-          <View style={styles.directDateBox}>
-            <CalendarDatePicker
-              label={periodPickerCopy.label}
-              value={formatDate(periodAnchor)}
-              onChange={(value) => setPeriodAnchor(new Date(`${value}T00:00:00`))}
+          <Pressable
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            style={styles.toggleDatePickerBtn}
+          >
+            <Feather name="calendar" size={13} color={colors.amber} style={{ marginRight: 6 }} />
+            <Text style={styles.toggleDatePickerText}>
+              {showDatePicker ? 'Ocultar selector de fecha' : 'Elegir fecha específica...'}
+            </Text>
+            <Feather
+              name={showDatePicker ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={colors.amber}
             />
-            <Text style={styles.directDateHint}>{periodPickerCopy.hint}</Text>
-          </View>
+          </Pressable>
 
+          {showDatePicker && (
+            <View style={styles.directDateBox}>
+              <CalendarDatePicker
+                label={periodPickerCopy.label}
+                value={formatDate(periodAnchor)}
+                onChange={(value) => setPeriodAnchor(new Date(`${value}T00:00:00`))}
+              />
+              <Text style={styles.directDateHint}>{periodPickerCopy.hint}</Text>
+            </View>
+          )}
+
+          {/* Valor Principal */}
           <View style={styles.heroMain}>
             <Text style={styles.heroLabel}>Total Vendido: {periodLabel}</Text>
             <Text
@@ -354,7 +376,7 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.heroGrid}>
-            <MiniStat icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.danger} />
+            <MiniStat icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.rose} />
             <MiniStat icon="dollar-sign" label="Cobrado" value={`$${periodDashboard.totalPagado}`} color={colors.success} />
             <MiniStat icon="box" label="Stock ml" value={`${stockTotal} ml`} color={colors.gold} />
           </View>
@@ -366,19 +388,21 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        {/* Métrica Rail Horizontal */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.metricRail}
         >
-          <DashboardMetricCard icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.danger} />
+          <DashboardMetricCard icon="arrow-up-right" label="Gastado" value={`$${periodDashboard.totalGastado}`} color={colors.rose} />
           <DashboardMetricCard icon="tag" label="Vendido" value={`$${periodDashboard.totalVendido}`} color={colors.text} />
           <DashboardMetricCard icon="dollar-sign" label="Cobrado" value={`$${periodDashboard.totalPagado}`} color={colors.success} />
-          <DashboardMetricCard icon="alert-circle" label="Deben" value={`$${periodDashboard.deudaClientes}`} color={colors.gold} />
+          <DashboardMetricCard icon="alert-circle" label="Deben" value={`$${periodDashboard.deudaClientes}`} color={colors.amber} />
           <DashboardMetricCard icon="trending-up" label="Ganancia Ventas" value={`$${periodDashboard.gananciaVendida}`} color={colors.gold} focus />
-          <DashboardMetricCard icon="trending-up" label="Ganancia Cobrada" value={`$${periodDashboard.gananciaCobrada}`} color={colors.success} focus />
+          <DashboardMetricCard icon="trending-up" label="Ganancia Real" value={`$${periodDashboard.gananciaCobrada}`} color={colors.success} focus />
         </ScrollView>
 
+        {/* Mapa del Periodo */}
         <View style={styles.panel}>
           <SectionHeader icon="map" title="Mapa del Periodo" detail={`Cifras de rendimiento: ${periodLabel}`} />
           <MoneyBar label="Gastado" value={periodDashboard.totalGastado} maxValue={maxMoney} color={colors.gold} />
@@ -390,26 +414,23 @@ export default function DashboardScreen() {
           <MoneyBar label="Diferencia Gastado/Cobrado" value={periodDashboard.gastadoMenosPagado} maxValue={maxMoney} tone="negativeGood" muted />
         </View>
 
+        {/* Ganancia por Tipo */}
         <View style={styles.panel}>
           <SectionHeader icon="bar-chart-2" title="Ganancia por Tipo" detail="Perfumes completos y decants vendidos en el periodo" />
-          <ProfitTypeCard label="Perfumes" data={periodDashboard.profitabilityByType.perfumes} />
-          <ProfitTypeCard label="Decants" data={periodDashboard.profitabilityByType.decants} />
+          <ProfitTypeCard label="Perfumes Completos" data={periodDashboard.profitabilityByType.perfumes} />
+          <ProfitTypeCard label="Decants Muestra" data={periodDashboard.profitabilityByType.decants} />
         </View>
 
+        {/* Gráficas */}
         <View style={styles.panel}>
-          <SectionHeader icon="activity" title="Graficas" detail={`Ventas por mes: ${selectedYear}`} />
+          <SectionHeader icon="activity" title="Rendimiento Anual" detail={`Ventas mes a mes: ${selectedYear}`} />
           <YearlySalesChart data={yearlySalesByMonth} year={selectedYear} />
           <SalesMixChart data={periodDashboard.profitabilityByType} />
         </View>
 
+        {/* Alerta de Inventario */}
         <View style={styles.panel}>
-          <SectionHeader icon="bar-chart-2" title="Ganancia por Tipo" detail="Perfumes completos y decants vendidos en el periodo" />
-          <ProfitTypeCard label="Perfumes" data={periodDashboard.profitabilityByType.perfumes} />
-          <ProfitTypeCard label="Decants" data={periodDashboard.profitabilityByType.decants} />
-        </View>
-
-        <View style={styles.panel}>
-          <SectionHeader icon="alert-triangle" title="Alerta de Inventario" detail="Perfumes críticos con menor stock" />
+          <SectionHeader icon="alert-triangle" title="Alerta de Inventario" detail="Perfumes con menor disponibilidad en stock" />
           {dashboard.perfumesMenosStock.length === 0 ? (
             <Text style={styles.emptyText}>No hay stock bajo registrado.</Text>
           ) : (
@@ -419,10 +440,11 @@ export default function DashboardScreen() {
           )}
         </View>
 
+        {/* Ranking */}
         <View style={styles.panel}>
-          <SectionHeader icon="award" title="Ranking Más Vendidos" detail={`Perfumes lideres: ${periodLabel}`} />
+          <SectionHeader icon="award" title="Ranking Más Vendidos" detail={`Perfumes líderes: ${periodLabel}`} />
           {periodDashboard.perfumesMasVendidos.length === 0 ? (
-            <Text style={styles.emptyText}>No hay ventas en este periodo.</Text>
+            <Text style={styles.emptyText}>No hay ventas registradas en este periodo.</Text>
           ) : (
             periodDashboard.perfumesMasVendidos.map((perfume, index) => (
               <RankingCard
@@ -435,8 +457,9 @@ export default function DashboardScreen() {
           )}
         </View>
 
+        {/* Inventario completo */}
         <View style={styles.panel}>
-          <SectionHeader icon="database" title="Inventario de Fragancias" detail="Detalle completo de ml y botellas" />
+          <SectionHeader icon="database" title="Inventario de Fragancias" detail="Detalle completo de ml y botellas disponibles" />
           {dashboard.inventarioPorPerfume.length === 0 ? (
             <Text style={styles.emptyText}>Aún no hay inventario registrado.</Text>
           ) : (
@@ -454,7 +477,7 @@ function MiniStat({ icon, label, value, color }) {
   return (
     <View style={styles.miniStat}>
       <View style={styles.miniStatTop}>
-        <Feather name={icon} size={11} color={color} />
+        <Feather name={icon} size={12} color={color} />
         <Text style={styles.miniLabel}>{label}</Text>
       </View>
       <Text style={styles.miniValue}>{value}</Text>
@@ -481,7 +504,7 @@ function DashboardMetricCard({ icon, label, value, color, focus = false }) {
     <View style={[styles.metricCard, focus && styles.metricFocus]}>
       <View style={styles.metricCardHeader}>
         <Text style={styles.metricLabel}>{label}</Text>
-        <Feather name={icon} size={13} color={focus ? colors.gold : colors.textSubtle} />
+        <Feather name={icon} size={14} color={focus ? colors.gold : colors.textSubtle} />
       </View>
       <Text style={[styles.metricValue, isNegative && styles.negativeValue, { color: isNegative ? colors.danger : (focus ? colors.gold : colors.text) }]}>
         {value}
@@ -494,18 +517,18 @@ function getMoneyToneColor(value, tone, fallbackColor) {
   const numericValue = Number(value) || 0;
 
   if (tone === 'debt') {
-    return numericValue > 0 ? colors.danger : colors.success;
+    return numericValue > 0 ? colors.rose : colors.success;
   }
 
   if (tone === 'negativeGood') {
-    return numericValue > 0 ? colors.danger : colors.success;
+    return numericValue > 0 ? colors.rose : colors.success;
   }
 
   if (tone === 'positiveGood') {
-    return numericValue < 0 ? colors.danger : colors.success;
+    return numericValue < 0 ? colors.rose : colors.success;
   }
 
-  return numericValue < 0 ? colors.danger : fallbackColor;
+  return numericValue < 0 ? colors.rose : fallbackColor;
 }
 
 function MoneyBar({ label, value, maxValue, color = colors.gold, tone = 'fixed', muted = false }) {
@@ -528,7 +551,7 @@ function MoneyBar({ label, value, maxValue, color = colors.gold, tone = 'fixed',
           style={[
             styles.moneyFill,
             { backgroundColor: toneColor },
-            muted && { opacity: 0.5 },
+            muted && { opacity: 0.55 },
             { width },
           ]}
         />
@@ -546,6 +569,10 @@ function ProfitTypeCard({ label, data }) {
       <View style={styles.rowTextGroup}>
         <Text style={styles.rowTitle}>{label}</Text>
         <Text style={styles.rowSubtext}>Vendido: ${Number(data.vendido || 0).toFixed(2)}</Text>
+      </View>
+      <View style={styles.profitNumbers}>
+        <Text style={styles.rowSubtext}>Ganancia Estimada</Text>
+        <Text style={[styles.profitValue, isNegative && styles.negativeValue]}>${profit}</Text>
       </View>
     </View>
   );
@@ -566,7 +593,7 @@ function YearlySalesChart({ data, year }) {
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
         <View>
-          <Text style={styles.chartTitle}>Ventas mensuales {year}</Text>
+          <Text style={styles.chartTitle}>Ventas Mensuales {year}</Text>
           <Text style={styles.chartSubtitle}>
             Perfumes ${totals.perfumes.toFixed(2)} · Decants ${totals.decants.toFixed(2)}
           </Text>
@@ -620,7 +647,7 @@ function SalesMixChart({ data }) {
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
-        <Text style={styles.chartTitle}>Distribucion de ventas</Text>
+        <Text style={styles.chartTitle}>Distribución de Ventas</Text>
         <Text style={styles.chartValue}>${perfumeValue + decantValue}</Text>
       </View>
       <View style={styles.mixRow}>
@@ -710,17 +737,17 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 42,
+    paddingBottom: 110,
   },
   motionWrap: {
     flex: 1,
   },
   hero: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.lineStrong,
-    padding: spacing.md,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.glow,
   },
@@ -734,11 +761,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: 4,
   },
   title: {
@@ -748,25 +775,25 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   statusChip: {
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
     borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderColor: colors.amber,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   statusChipText: {
-    color: colors.gold,
-    fontSize: 10,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   periodTabs: {
-    minHeight: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 44,
+    borderRadius: radius.pill,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     flexDirection: 'row',
     padding: 3,
     gap: 4,
@@ -774,43 +801,44 @@ const styles = StyleSheet.create({
   },
   periodTab: {
     flex: 1,
-    borderRadius: radius.sm - 2,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   periodTabActive: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.petroleum,
   },
   periodTabText: {
-    color: colors.textSubtle,
-    fontSize: 12,
+    color: colors.textMuted,
+    fontSize: 13,
     fontWeight: '800',
   },
   periodTabTextActive: {
-    color: colors.ink,
+    color: colors.white,
+    fontWeight: '900',
   },
   periodNavigator: {
-    minHeight: 40,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: spacing.md,
   },
   periodStepButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   periodCurrentButton: {
     flex: 1,
-    minHeight: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     alignItems: 'center',
@@ -818,11 +846,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   periodCurrentText: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.petroleum,
+    fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
     textAlign: 'center',
+  },
+  toggleDatePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  toggleDatePickerText: {
+    color: colors.amber,
+    fontSize: 12,
+    fontWeight: '800',
+    marginRight: 4,
   },
   directDateBox: {
     marginBottom: spacing.md,
@@ -832,23 +877,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 16,
-    marginTop: -spacing.md,
+    marginTop: -spacing.sm,
     marginBottom: spacing.sm,
   },
   heroMain: {
     marginBottom: spacing.md,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    padding: spacing.md,
+    backgroundColor: colors.field,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
   },
   heroLabel: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '800',
+    color: colors.amber,
+    fontSize: 11,
+    fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     marginBottom: 4,
   },
   heroValue: {
@@ -859,17 +904,17 @@ const styles = StyleSheet.create({
   },
   heroDivider: {
     height: 1,
-    backgroundColor: colors.line,
+    backgroundColor: colors.lineSoft,
     marginVertical: spacing.sm,
   },
   goldHighlight: {
-    color: colors.gold,
+    color: colors.amber,
     fontWeight: '900',
   },
   heroNote: {
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
   },
   heroGrid: {
     flexDirection: 'row',
@@ -877,11 +922,11 @@ const styles = StyleSheet.create({
   },
   miniStat: {
     flex: 1,
-    minHeight: 58,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 62,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
@@ -889,7 +934,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   miniValue: {
     color: colors.text,
@@ -899,7 +944,7 @@ const styles = StyleSheet.create({
   miniLabel: {
     color: colors.textSubtle,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     textTransform: 'uppercase',
   },
   metricRail: {
@@ -907,12 +952,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   metricCard: {
-    width: 130,
-    minHeight: 80,
+    width: 136,
+    minHeight: 84,
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     padding: spacing.sm,
     justifyContent: 'space-between',
     ...shadow.card,
@@ -923,13 +968,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metricFocus: {
-    borderColor: colors.lineStrong,
-    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.amber,
+    backgroundColor: colors.field,
   },
   metricLabel: {
     color: colors.textSubtle,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     textTransform: 'uppercase',
   },
   metricValue: {
@@ -941,10 +986,10 @@ const styles = StyleSheet.create({
   },
   panel: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
+    borderColor: colors.lineStrong,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.card,
   },
@@ -954,22 +999,22 @@ const styles = StyleSheet.create({
   sectionTitleBlock: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+    gap: 8,
+    marginBottom: 3,
   },
   sectionIcon: {
     marginBottom: 1,
   },
   panelTitle: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   panelDetail: {
-    color: colors.textSubtle,
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   moneyRow: {
     marginBottom: spacing.sm,
@@ -982,17 +1027,17 @@ const styles = StyleSheet.create({
   },
   moneyLabel: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   moneyValue: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
   },
   moneyTrack: {
     height: 8,
     borderRadius: radius.pill,
-    backgroundColor: colors.background,
+    backgroundColor: colors.field,
     overflow: 'hidden',
   },
   moneyFill: {
@@ -1000,12 +1045,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   profitTypeCard: {
-    minHeight: 64,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 66,
+    borderRadius: radius.lg,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1014,24 +1059,19 @@ const styles = StyleSheet.create({
   },
   profitNumbers: {
     alignItems: 'flex-end',
-    gap: 3,
-  },
-  profitExpense: {
-    color: colors.danger,
-    fontSize: 11,
-    fontWeight: '800',
+    gap: 2,
   },
   profitValue: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 14,
     fontWeight: '900',
   },
   chartCard: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
     marginBottom: spacing.sm,
   },
   chartHeader: {
@@ -1039,22 +1079,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   chartTitle: {
     color: colors.text,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
   chartSubtitle: {
     color: colors.textSubtle,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     marginTop: 2,
   },
   chartValue: {
-    color: colors.gold,
-    fontSize: 13,
+    color: colors.amber,
+    fontSize: 15,
     fontWeight: '900',
   },
   yearBarScrollContent: {
@@ -1062,22 +1102,22 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   yearBarMonth: {
-    width: 54,
+    width: 56,
     alignItems: 'center',
   },
   yearBarPlot: {
     width: '100%',
-    height: 126,
-    borderRadius: radius.sm - 2,
-    backgroundColor: colors.background,
+    height: 130,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     justifyContent: 'flex-end',
     paddingHorizontal: 9,
     paddingBottom: 8,
   },
   yearBarPair: {
-    height: 108,
+    height: 112,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
@@ -1087,23 +1127,23 @@ const styles = StyleSheet.create({
     width: 12,
     borderTopLeftRadius: radius.pill,
     borderTopRightRadius: radius.pill,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.petroleum,
   },
   yearBarDecant: {
     width: 12,
     borderTopLeftRadius: radius.pill,
     borderTopRightRadius: radius.pill,
-    backgroundColor: colors.success,
+    backgroundColor: colors.amber,
   },
   yearBarLabel: {
-    color: colors.textSubtle,
-    fontSize: 10,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
-    marginTop: 5,
+    marginTop: 6,
   },
   yearBarValue: {
     color: colors.textMuted,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
     marginTop: 2,
     textAlign: 'center',
@@ -1122,17 +1162,17 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.petroleum,
   },
   legendDecant: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.success,
+    backgroundColor: colors.amber,
   },
   chartLegendText: {
-    color: colors.textSubtle,
-    fontSize: 11,
+    color: colors.textMuted,
+    fontSize: 12,
     fontWeight: '800',
   },
   mixRow: {
@@ -1143,26 +1183,26 @@ const styles = StyleSheet.create({
   circleMetric: {
     flex: 1,
     aspectRatio: 1.65,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.lineStrong,
-    backgroundColor: 'rgba(166, 136, 100, 0.14)',
+    backgroundColor: 'rgba(22, 50, 58, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   circleMetricMuted: {
     flex: 1,
     aspectRatio: 1.65,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(9, 144, 225, 0.35)',
-    backgroundColor: 'rgba(9, 144, 225, 0.12)',
+    borderColor: 'rgba(166, 106, 53, 0.25)',
+    backgroundColor: 'rgba(166, 106, 53, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   circlePercent: {
     color: colors.text,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
   },
   circleLabel: {
@@ -1177,35 +1217,35 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     flexDirection: 'row',
     overflow: 'hidden',
-    backgroundColor: colors.background,
+    backgroundColor: colors.field,
   },
   stackedFillGold: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.petroleum,
   },
   stackedFillSuccess: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.amber,
   },
   stockRow: {
-    minHeight: 64,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 66,
+    borderRadius: radius.lg,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   stockRowEmpty: {
     backgroundColor: colors.dangerSurface,
     borderColor: colors.dangerLine,
   },
   rankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    width: 30,
+    height: 30,
+    borderRadius: radius.md,
+    backgroundColor: colors.petroleum,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1213,8 +1253,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   rankBadgeText: {
-    color: colors.ink,
-    fontSize: 12,
+    color: colors.white,
+    fontSize: 13,
     fontWeight: '900',
   },
   rowTextGroup: {
@@ -1222,45 +1262,45 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
   },
   rowSubtext: {
-    color: colors.textSubtle,
-    fontSize: 11,
-    fontWeight: '600',
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
     marginTop: 2,
   },
   rowValue: {
-    color: colors.gold,
-    fontSize: 13,
+    color: colors.amber,
+    fontSize: 14,
     fontWeight: '900',
   },
   stockSignal: {
-    borderRadius: radius.sm - 2,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: 8,
+    borderColor: colors.lineStrong,
+    paddingHorizontal: 10,
     paddingVertical: 4,
   },
   stockSignalEmpty: {
     borderColor: colors.dangerLine,
   },
   stockSignalText: {
-    color: colors.gold,
-    fontSize: 9,
+    color: colors.petroleum,
+    fontSize: 10,
     fontWeight: '900',
   },
   rankingCard: {
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.lg,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
     marginBottom: 8,
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     alignItems: 'center',
   },
   rankingBody: {
@@ -1275,27 +1315,27 @@ const styles = StyleSheet.create({
   slimTrack: {
     height: 6,
     borderRadius: radius.pill,
-    backgroundColor: colors.background,
+    backgroundColor: colors.field,
     overflow: 'hidden',
     marginBottom: 4,
   },
   slimFill: {
     height: '100%',
     borderRadius: radius.pill,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.petroleum,
   },
   inventoryCard: {
-    minHeight: 58,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 64,
+    borderRadius: radius.lg,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   inventoryCardEmpty: {
     backgroundColor: colors.dangerSurface,
@@ -1306,25 +1346,25 @@ const styles = StyleSheet.create({
   },
   inventoryMl: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
   inventoryBottle: {
-    color: colors.gold,
-    fontSize: 11,
+    color: colors.amber,
+    fontSize: 12,
     fontWeight: '800',
     marginTop: 2,
   },
   emptyText: {
     color: colors.textSubtle,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   messageBox: {
     backgroundColor: colors.dangerSurface,
     borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },

@@ -106,11 +106,11 @@ export default function SaleDetailScreen({ navigation, route }) {
   function handleCancelSale() {
     Alert.alert(
       'Cancelar venta',
-      'Se ocultará la venta de pendientes y se restaurará el stock vendido.',
+      'Se restaurará el stock vendido en los lotes correspondientes y se ocultará la venta.',
       [
-        { text: 'No cancelar', style: 'cancel' },
+        { text: 'Mantener venta', style: 'cancel' },
         {
-          text: 'Cancelar venta',
+          text: 'Sí, Cancelar Venta',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -126,142 +126,248 @@ export default function SaleDetailScreen({ navigation, route }) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.kicker}>Ficha de Venta</Text>
-      <Text style={styles.title}>{client.nombre}</Text>
-
-      {!!error && (
-        <View style={styles.messageBox}>
-          <Text style={styles.errorText}>{error}</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Official Certificate / Invoice Hero */}
+      <View style={styles.invoiceHeroCard}>
+        <View style={styles.invoiceHeroTop}>
+          <View style={styles.crestBadge}>
+            <Feather name="file-text" size={20} color={colors.gold} />
+          </View>
+          <View style={styles.invoiceHeroTitleGroup}>
+            <Text style={styles.kicker}>RECIBO DE VENTA PRIVÉE</Text>
+            <Text style={styles.clientTitle}>{client.nombre}</Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  sale.estado_pago === 'liquidado'
+                    ? 'rgba(95, 175, 139, 0.2)'
+                    : sale.estado_pago === 'parcial'
+                      ? 'rgba(166, 106, 53, 0.25)'
+                      : 'rgba(201, 151, 152, 0.25)',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                {
+                  color:
+                    sale.estado_pago === 'liquidado'
+                      ? colors.success
+                      : sale.estado_pago === 'parcial'
+                        ? colors.amber
+                        : colors.danger,
+                },
+              ]}
+            >
+              {sale.estado_pago?.toUpperCase()}
+            </Text>
+          </View>
         </View>
-      )}
 
-      <View style={styles.panel}>
-        {editing ? (
-          <>
-            <CalendarDatePicker
-              label="Fecha de venta"
-              value={form.fecha_venta}
-              onChange={(value) => updateField('fecha_venta', value)}
-            />
-            {(sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial') && (
-              <CalendarDatePicker
-                label="Fecha prometida de pago"
-                value={form.fecha_pago_promesa}
-                onChange={(value) => updateField('fecha_pago_promesa', value)}
-              />
-            )}
-            <FormInput
-              label="Total de venta"
-              value={form.total}
-              onChangeText={(value) => updateField('total', value)}
-              placeholder="Ej. 180"
-              keyboardType="numeric"
-            />
-            <FormInput
-              label="Notas internas"
-              value={form.notas}
-              onChangeText={(value) => updateField('notas', value)}
-              placeholder="Escribe comentarios sobre la venta..."
-              multiline
-            />
-            <View style={{ marginTop: 8 }}>
-              <PrimaryButton
-                title={saving ? 'Guardando...' : 'Guardar Cambios'}
-                onPress={handleSave}
-                disabled={saving}
-              />
-            </View>
-          </>
-        ) : (
-          <>
-            <View style={styles.breakdownGrid}>
-              <Breakdown label="Total Venta" value={`$${sale.total || 0}`} />
-              <Breakdown label="Pagado" value={`$${totalPaid}`} color={colors.success} />
-              <Breakdown label="Pendiente" value={`$${remaining}`} highlight />
-            </View>
-            <View style={styles.metaRow}>
-              <Feather name="calendar" size={12} color={colors.textSubtle} />
-              <Text style={styles.metaText}>
-                Registrado: {formatDateValue(sale.fecha_venta)}  ·  Estado: <Text style={{ color: sale.estado_pago === 'liquidado' ? colors.success : colors.gold, fontWeight: '700' }}>{sale.estado_pago?.toUpperCase()}</Text>
-              </Text>
-            </View>
-            {!!sale.fecha_pago_promesa && (sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial') && (
-              <View style={styles.metaRow}>
-                <Feather name="clock" size={12} color={colors.gold} />
-                <Text style={[styles.metaText, { color: colors.gold }]}>
-                  Pago prometido: {formatDateValue(sale.fecha_pago_promesa)}
+        <View style={styles.invoiceHeroMeta}>
+          <View style={styles.metaItem}>
+            <Feather name="calendar" size={12} color={colors.gold} />
+            <Text style={styles.metaItemText}>
+              Fecha: {formatDateValue(sale.fecha_venta)}
+            </Text>
+          </View>
+          {!!sale.fecha_pago_promesa &&
+            (sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial') && (
+              <View style={styles.metaItem}>
+                <Feather name="clock" size={12} color={colors.amber} />
+                <Text style={[styles.metaItemText, { color: colors.amber }]}>
+                  Promesa: {formatDateValue(sale.fecha_pago_promesa)}
                 </Text>
               </View>
             )}
-          </>
-        )}
+        </View>
       </View>
 
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Feather name="shopping-bag" size={16} color={colors.gold} />
-          <Text style={styles.panelTitle}>Productos Vendidos</Text>
+      {!!error && (
+        <View style={styles.errorAlert}>
+          <Feather name="alert-circle" size={16} color={colors.rose} />
+          <Text style={styles.errorAlertText}>{error}</Text>
         </View>
+      )}
+
+      {/* Financial Health Summary Cards */}
+      <View style={styles.financialRail}>
+        <View style={styles.financialCard}>
+          <Text style={styles.financialLabel}>TOTAL VENTA</Text>
+          <Text style={styles.financialValue}>${sale.total || 0}</Text>
+          <Text style={styles.financialSub}>Monto acordado</Text>
+        </View>
+
+        <View style={styles.financialCard}>
+          <Text style={styles.financialLabel}>TOTAL ABONADO</Text>
+          <Text style={[styles.financialValue, { color: colors.success }]}>
+            ${totalPaid}
+          </Text>
+          <Text style={styles.financialSub}>{payments.length} abonos</Text>
+        </View>
+
+        <View
+          style={[
+            styles.financialCard,
+            remaining > 0 && styles.financialCardDebt,
+          ]}
+        >
+          <Text
+            style={[
+              styles.financialLabel,
+              remaining > 0 && { color: colors.rose },
+            ]}
+          >
+            SALDO RESTANTE
+          </Text>
+          <Text
+            style={[
+              styles.financialValue,
+              { color: remaining > 0 ? colors.rose : colors.success },
+            ]}
+          >
+            ${remaining}
+          </Text>
+          <Text style={styles.financialSub}>
+            {remaining > 0 ? 'Por liquidar' : 'Saldado'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Editable Form Panel if active */}
+      {editing && (
+        <View style={styles.editPanel}>
+          <View style={styles.editPanelHeader}>
+            <Feather name="edit-3" size={16} color={colors.gold} />
+            <Text style={styles.editPanelTitle}>Editar Ficha de Venta</Text>
+          </View>
+
+          <CalendarDatePicker
+            label="Fecha de Venta"
+            value={form.fecha_venta}
+            onChange={(val) => updateField('fecha_venta', val)}
+          />
+
+          {(sale.estado_pago === 'pendiente' || sale.estado_pago === 'parcial') && (
+            <CalendarDatePicker
+              label="Fecha Prometida de Pago"
+              value={form.fecha_pago_promesa}
+              onChange={(val) => updateField('fecha_pago_promesa', val)}
+            />
+          )}
+
+          <FormInput
+            label="Monto Total ($ MXN)"
+            value={form.total}
+            onChangeText={(val) => updateField('total', val)}
+            placeholder="Ej. 180"
+            keyboardType="numeric"
+          />
+
+          <FormInput
+            label="Notas Internas de la Venta"
+            value={form.notas}
+            onChangeText={(val) => updateField('notas', val)}
+            placeholder="Comentarios de entrega o abonos..."
+            multiline
+          />
+
+          <View style={{ marginTop: 8 }}>
+            <PrimaryButton
+              title={saving ? 'Guardando Cambios...' : 'Confirmar Cambios'}
+              onPress={handleSave}
+              disabled={saving}
+              variant="amber"
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Sold Products Catalog Section */}
+      <View style={styles.luxuryPanel}>
+        <View style={styles.panelHeader}>
+          <Feather name="package" size={16} color={colors.gold} />
+          <Text style={styles.panelTitle}>Artículos Seleccionados ({groupedDetails.length})</Text>
+        </View>
+
         {groupedDetails.map((detail) => (
-          <View key={detail.id} style={styles.rowItem}>
-            <View>
-              <Text style={styles.rowTitle}>{getPerfumeName(detail.perfume_id)}</Text>
-              <Text style={styles.rowText}>
-                {detail.cantidad} x {detail.ml_vendidos} ml  ·  {detail.tipo_producto?.replace('_', ' ')}
+          <View key={detail.id} style={styles.productCard}>
+            <View style={styles.productIconWrap}>
+              <Feather name="droplet" size={16} color={colors.gold} />
+            </View>
+            <View style={styles.productInfo}>
+              <Text style={styles.productPerfumeName}>
+                {getPerfumeName(detail.perfume_id)}
+              </Text>
+              <Text style={styles.productSub}>
+                {detail.cantidad} unid. × {detail.ml_vendidos} ml ·{' '}
+                {detail.tipo_producto?.replace('_', ' ')}
               </Text>
             </View>
-            <Text style={styles.rowValue}>${detail.subtotal || 0}</Text>
+            <Text style={styles.productSubtotal}>${detail.subtotal || 0}</Text>
           </View>
         ))}
       </View>
 
-      <View style={styles.panel}>
+      {/* Payment History Section */}
+      <View style={styles.luxuryPanel}>
         <View style={styles.panelHeader}>
           <Feather name="credit-card" size={16} color={colors.gold} />
-          <Text style={styles.panelTitle}>Historial de Pagos</Text>
+          <Text style={styles.panelTitle}>Historial de Abonos Recibidos</Text>
         </View>
+
         {payments.length === 0 ? (
-          <Text style={styles.emptyText}>No hay pagos registrados para esta venta.</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              No se han registrado abonos para esta venta aún.
+            </Text>
+          </View>
         ) : (
           payments.map((payment) => (
-            <View key={payment.id} style={styles.rowItem}>
-              <View>
-                <Text style={styles.rowTitle}>${payment.monto || 0}</Text>
-                <Text style={styles.rowText}>
-                  {formatDateValue(payment.fecha_pago)}  ·  {payment.metodo_pago}
+            <View key={payment.id} style={styles.paymentCard}>
+              <View style={styles.paymentTop}>
+                <View style={styles.paymentAmountGroup}>
+                  <Text style={styles.paymentAmount}>+${payment.monto || 0}</Text>
+                  <Text style={styles.paymentMethodBadge}>
+                    {payment.metodo_pago?.toUpperCase() || 'PAGO DIRECTO'}
+                  </Text>
+                </View>
+                <Text style={styles.paymentDate}>
+                  {formatDateValue(payment.fecha_pago)}
                 </Text>
               </View>
-              {!!payment.notas && <Text style={styles.paymentNote}>{payment.notas}</Text>}
+              {!!payment.notas && (
+                <Text style={styles.paymentNotes}>Nota: {payment.notas}</Text>
+              )}
             </View>
           ))
         )}
       </View>
 
-      <View style={styles.actions}>
+      {/* Action Buttons */}
+      <View style={styles.actionsBlock}>
         <PrimaryButton
-          title={editing ? 'Cancelar Edición' : 'Editar Información'}
-          onPress={() => setEditing((value) => !value)}
-          variant="secondary"
+          title={editing ? 'Cerrar Edición' : 'Editar Información de Venta'}
+          onPress={() => setEditing((val) => !val)}
+          variant="outline"
         />
-        <View style={{ marginTop: 2 }}>
-          <PrimaryButton title="Cancelar Venta (Reactivar Stock)" onPress={handleCancelSale} />
+        <View style={{ marginTop: 10 }}>
+          <PrimaryButton
+            title="Cancelar Venta (Reactivar Stock en Lotes)"
+            onPress={handleCancelSale}
+            variant="danger"
+          />
         </View>
       </View>
     </ScrollView>
-  );
-}
-
-function Breakdown({ label, value, highlight = false, color = colors.text }) {
-  return (
-    <View style={[styles.breakdownItem, highlight && styles.breakdownHighlight]}>
-      <Text style={[styles.breakdownLabel, highlight && styles.breakdownLabelHighlight]}>
-        {label}
-      </Text>
-      <Text style={[styles.breakdownValue, highlight && styles.breakdownValueHighlight, { color: highlight ? colors.ink : color }]}>
-        {value}
-      </Text>
-    </View>
   );
 }
 
@@ -272,28 +378,157 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 60,
+    paddingBottom: 110,
+  },
+  invoiceHeroCard: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  invoiceHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  crestBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
+    borderWidth: 1.5,
+    borderColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invoiceHeroTitleGroup: {
+    flex: 1,
   },
   kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
   },
-  title: {
+  clientTitle: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '900',
-    letterSpacing: -0.5,
-    marginBottom: 16,
+    letterSpacing: -0.4,
   },
-  panel: {
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+  },
+  statusBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  invoiceHeroMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaItemText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  errorAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorAlertText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  financialRail: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  financialCard: {
+    flex: 1,
     backgroundColor: colors.surfaceCard,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
+    padding: 10,
+    alignItems: 'center',
+  },
+  financialCardDebt: {
+    borderColor: colors.dangerLine,
+    backgroundColor: colors.dangerSurface,
+  },
+  financialLabel: {
+    color: colors.amber,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  financialValue: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  financialSub: {
+    color: colors.textSubtle,
+    fontSize: 9,
+  },
+  editPanel: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  editPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  editPanelTitle: {
+    color: colors.amber,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  luxuryPanel: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
     padding: spacing.md,
     marginBottom: spacing.md,
     ...shadow.card,
@@ -301,115 +536,105 @@ const styles = StyleSheet.create({
   panelHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginBottom: spacing.md,
   },
   panelTitle: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  breakdownGrid: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: spacing.sm,
-  },
-  breakdownItem: {
-    flex: 1,
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: 10,
-  },
-  breakdownHighlight: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    ...shadow.glow,
-  },
-  breakdownLabel: {
-    color: colors.textSubtle,
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 4,
-  },
-  breakdownLabelHighlight: {
-    color: colors.ink,
-    opacity: 0.8,
-  },
-  breakdownValue: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
+    letterSpacing: 0.2,
   },
-  breakdownValueHighlight: {
-    fontWeight: '900',
-  },
-  metaRow: {
+  productCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
-    paddingHorizontal: 2,
-  },
-  metaText: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  rowItem: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
+    backgroundColor: colors.field,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: 12,
     marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
   },
-  rowTitle: {
+  productIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productPerfumeName: {
     color: colors.text,
     fontSize: 14,
     fontWeight: '800',
   },
-  rowText: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  rowValue: {
-    color: colors.gold,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  paymentNote: {
+  productSub: {
     color: colors.textSubtle,
     fontSize: 11,
-    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  productSubtotal: {
+    color: colors.amber,
+    fontSize: 16,
+    fontWeight: '900',
+    marginLeft: 8,
+  },
+  emptyState: {
+    padding: spacing.md,
+    alignItems: 'center',
   },
   emptyText: {
     color: colors.textSubtle,
-    fontSize: 13,
+    fontSize: 12,
+    fontStyle: 'italic',
   },
-  actions: {
+  paymentCard: {
+    backgroundColor: colors.field,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: 12,
+    marginBottom: 8,
+  },
+  paymentTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  paymentAmountGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  messageBox: {
-    backgroundColor: colors.dangerSurface,
-    borderColor: colors.dangerLine,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+  paymentAmount: {
+    color: colors.success,
+    fontSize: 16,
+    fontWeight: '900',
   },
-  errorText: {
-    color: colors.danger,
-    fontSize: 13,
-    fontWeight: '700',
+  paymentMethodBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.xs,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
+    color: colors.petroleum,
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  paymentDate: {
+    color: colors.textSubtle,
+    fontSize: 11,
+  },
+  paymentNotes: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+  actionsBlock: {
+    marginTop: spacing.md,
   },
 });

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Feather } from '@expo/vector-icons';
 
 import AppMenu from '../components/AppMenu';
 import MenuButton from '../components/MenuButton';
+import AnimatedPressable from '../components/AnimatedPressable';
+import BottomLuxuryDock from '../components/BottomLuxuryDock';
 import ClientDetailScreen from '../screens/ClientDetailScreen';
 import ClientFormScreen from '../screens/ClientFormScreen';
 import ClientsListScreen from '../screens/ClientsListScreen';
@@ -19,13 +22,14 @@ import ReceivablesCalendarScreen from '../screens/ReceivablesCalendarScreen';
 import SaleDetailScreen from '../screens/SaleDetailScreen';
 import SaleFormScreen from '../screens/SaleFormScreen';
 import { listenAuthState, logout } from '../services/authService';
-import { colors } from '../theme';
+import { colors, radius, shadow } from '../theme';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [navigationRef, setNavigationRef] = useState(null);
+  const [currentRoute, setCurrentRoute] = useState('Home');
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -46,52 +50,73 @@ export default function AppNavigator() {
     await logout();
   }
 
+  function handleNavigationStateChange() {
+    const route = navigationRef?.getCurrentRoute();
+    if (route?.name) {
+      setCurrentRoute(route.name);
+    }
+  }
+
   if (!authReady) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={colors.gold} />
+        <ActivityIndicator color={colors.gold} size="large" />
       </View>
     );
   }
 
   return (
-    <NavigationContainer ref={setNavigationRef}>
+    <NavigationContainer
+      ref={setNavigationRef}
+      onReady={handleNavigationStateChange}
+      onStateChange={handleNavigationStateChange}
+    >
       {user ? (
         <>
           <Stack.Navigator
             screenOptions={({ navigation }) => ({
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.text,
-              headerTitleStyle: { fontWeight: '900', fontSize: 16 },
+              headerTitleStyle: {
+                fontWeight: '900',
+                fontSize: 15,
+                letterSpacing: 1.5,
+                color: colors.text,
+                textTransform: 'uppercase',
+              },
               headerShadowVisible: false,
               contentStyle: { backgroundColor: colors.background },
               headerLeft: () => (
                 <View style={styles.headerLeft}>
                   <MenuButton onPress={() => setMenuVisible(true)} />
                   {navigation.canGoBack() && (
-                    <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-                      <Text style={styles.backText}>{'<'}</Text>
-                    </Pressable>
+                    <AnimatedPressable
+                      onPress={() => navigation.goBack()}
+                      style={styles.backButton}
+                      scaleTo={0.92}
+                    >
+                      <Feather name="chevron-left" size={20} color={colors.gold} />
+                    </AnimatedPressable>
                   )}
                 </View>
               ),
             })}
           >
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Inicio' }} />
+            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Boutique' }} />
             <Stack.Screen
               name="PerfumesList"
               component={PerfumesListScreen}
-              options={{ title: 'Catalogo' }}
+              options={{ title: 'Catálogo' }}
             />
             <Stack.Screen
               name="PerfumeForm"
               component={PerfumeFormScreen}
-              options={{ title: 'Agregar perfume' }}
+              options={{ title: 'Nueva Fragancia' }}
             />
             <Stack.Screen
               name="PerfumeDetail"
               component={PerfumeDetailScreen}
-              options={{ title: 'Detalle' }}
+              options={{ title: 'Detalle Fragancia' }}
             />
             <Stack.Screen
               name="ClientsList"
@@ -101,35 +126,39 @@ export default function AppNavigator() {
             <Stack.Screen
               name="ClientForm"
               component={ClientFormScreen}
-              options={{ title: 'Agregar cliente' }}
+              options={{ title: 'Nuevo Cliente' }}
             />
             <Stack.Screen
               name="ClientDetail"
               component={ClientDetailScreen}
-              options={{ title: 'Cliente' }}
+              options={{ title: 'Ficha Cliente' }}
             />
             <Stack.Screen
               name="SaleForm"
               component={SaleFormScreen}
-              options={{ title: 'Nueva venta' }}
+              options={{ title: 'Nueva Venta' }}
             />
             <Stack.Screen
               name="SaleDetail"
               component={SaleDetailScreen}
-              options={{ title: 'Detalle venta' }}
+              options={{ title: 'Detalle Venta' }}
             />
-            <Stack.Screen name="Payments" component={PaymentsScreen} options={{ title: 'Pagos' }} />
+            <Stack.Screen name="Payments" component={PaymentsScreen} options={{ title: 'Cobros & Pagos' }} />
             <Stack.Screen
               name="ReceivablesCalendar"
               component={ReceivablesCalendarScreen}
-              options={{ title: 'Calendario de pagos' }}
+              options={{ title: 'Calendario Pagos' }}
             />
             <Stack.Screen
               name="Dashboard"
               component={DashboardScreen}
-              options={{ title: 'Dashboard' }}
+              options={{ title: 'Dashboard Ejecutivo' }}
             />
           </Stack.Navigator>
+          <BottomLuxuryDock
+            currentRoute={currentRoute}
+            onNavigate={(routeName) => navigationRef?.navigate(routeName)}
+          />
           <AppMenu
             visible={menuVisible}
             onClose={() => setMenuVisible(false)}
@@ -161,18 +190,16 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 8,
   },
   backButton: {
-    width: 36,
-    height: 42,
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backText: {
-    color: colors.gold,
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: '800',
   },
 });

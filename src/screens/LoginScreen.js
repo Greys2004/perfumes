@@ -16,7 +16,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email.trim() || !password) {
-      Alert.alert('Faltan datos', 'Ingresa correo y contrasena.');
+      Alert.alert('Faltan datos', 'Ingresa correo y contraseña.');
       return;
     }
 
@@ -24,7 +24,7 @@ export default function LoginScreen() {
       setSaving(true);
       await loginWithEmail(email, password);
     } catch (error) {
-      Alert.alert('No se pudo iniciar sesion', getAuthErrorMessage(error));
+      Alert.alert('No se pudo iniciar sesión', getAuthErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -41,25 +41,27 @@ export default function LoginScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.logoBlock}>
-          <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          <View style={styles.logoWrap}>
+            <Image source={require('../../assets/icon.png')} style={styles.logo} />
+          </View>
           <Text style={styles.brand}>AromaOrigen</Text>
-          <Text style={styles.brandSubtitle}>Panel privado</Text>
+          <Text style={styles.brandSubtitle}>Perfumería de Alta Gama • Panel Privado</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.headerIcon}>
-              <Feather name="lock" size={18} color={colors.ink} />
+              <Feather name="lock" size={16} color={colors.white} />
             </View>
-            <Text style={styles.kicker}>Acceso privado</Text>
+            <Text style={styles.kicker}>Acceso Exclusivo</Text>
           </View>
-          <Text style={styles.title}>Iniciar sesion</Text>
+          <Text style={styles.title}>Iniciar Sesión</Text>
 
           <FormInput
-            label="Correo"
+            label="Correo Electrónico"
             value={email}
             onChangeText={setEmail}
-            placeholder="correo@ejemplo.com"
+            placeholder="admin@aromaorigen.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -67,10 +69,10 @@ export default function LoginScreen() {
           />
 
           <FormInput
-            label="Contrasena"
+            label="Contraseña"
             value={password}
             onChangeText={setPassword}
-            placeholder="Tu contrasena"
+            placeholder="••••••••"
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
@@ -80,11 +82,11 @@ export default function LoginScreen() {
                 onPress={() => setShowPassword((currentValue) => !currentValue)}
                 style={styles.eyeButton}
                 accessibilityRole="button"
-                accessibilityLabel={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
                 <Feather
                   name={showPassword ? 'eye-off' : 'eye'}
-                  size={20}
+                  size={18}
                   color={colors.gold}
                 />
               </Pressable>
@@ -92,7 +94,7 @@ export default function LoginScreen() {
           />
 
           <PrimaryButton
-            title={saving ? 'Iniciando...' : 'Iniciar sesion'}
+            title={saving ? 'Autenticando...' : 'Iniciar Sesión'}
             onPress={handleLogin}
             disabled={saving}
           />
@@ -104,11 +106,11 @@ export default function LoginScreen() {
 
 function getAuthErrorMessage(error) {
   if (error?.code === 'auth/invalid-credential') {
-    return 'El correo o la contrasena no son correctos.';
+    return 'El correo o la contraseña no son correctos.';
   }
 
   if (error?.code === 'auth/too-many-requests') {
-    return 'Hubo demasiados intentos. Intenta mas tarde.';
+    return 'Hubo demasiados intentos. Intenta más tarde.';
   }
 
   return error?.message || 'Revisa tus datos e intenta de nuevo.';
@@ -128,23 +130,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  logo: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceCard,
+  logoWrap: {
+    padding: 6,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.lineStrong,
+    backgroundColor: colors.surfaceCard,
     marginBottom: spacing.md,
+    ...shadow.glow,
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    borderRadius: radius.lg,
   },
   brand: {
     color: colors.text,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '900',
+    letterSpacing: -0.5,
   },
   brandSubtitle: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -152,36 +160,36 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.lineStrong,
-    padding: spacing.lg,
+    padding: spacing.xl,
     ...shadow.card,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   headerIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    width: 30,
+    height: 30,
+    borderRadius: radius.pill,
+    backgroundColor: colors.petroleum,
     alignItems: 'center',
     justifyContent: 'center',
   },
   kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
     marginBottom: spacing.lg,
   },

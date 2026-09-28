@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
@@ -99,21 +99,32 @@ export default function PaymentsScreen() {
       0
     );
     const total = Number(sale.total) || 0;
+    const remaining = Math.max(total - totalPaid, 0);
 
     return {
       salePayments,
       totalPaid,
-      remaining: total - totalPaid,
+      remaining,
+      percent: total > 0 ? Math.min(Math.round((totalPaid / total) * 100), 100) : 0,
     };
   }
 
+  const overallPendingTotal = useMemo(() => {
+    return sales.reduce((sum, sale) => {
+      const summary = getSaleSummary(sale);
+      return sum + summary.remaining;
+    }, 0);
+  }, [sales, payments]);
+
   function getForm(saleId) {
-    return paymentForms[saleId] || {
-      monto: '',
-      metodo_pago: '',
-      fecha_pago: today,
-      notas: '',
-    };
+    return (
+      paymentForms[saleId] || {
+        monto: '',
+        metodo_pago: '',
+        fecha_pago: today,
+        notas: '',
+      }
+    );
   }
 
   function updatePaymentField(saleId, field, value) {
@@ -127,16 +138,16 @@ export default function PaymentsScreen() {
   }
 
   async function handleAddPayment(saleId) {
-    const paymentForm = getForm(saleId);
+    const form = getForm(saleId);
 
-    if (!paymentForm.monto.trim()) {
-      Alert.alert('Falta el monto', 'Escribe cuánto pagó el cliente.');
+    if (!form.monto.trim()) {
+      Alert.alert('Falta el monto', 'Escribe el valor del abono.');
       return;
     }
 
     try {
       setSavingSaleId(saleId);
-      await addPaymentToSale(saleId, paymentForm);
+      await addPaymentToSale(saleId, form);
       setPaymentForms((currentForms) => ({
         ...currentForms,
         [saleId]: {
@@ -147,35 +158,7 @@ export default function PaymentsScreen() {
         },
       }));
     } catch (firebaseError) {
-      Alert.alert('No se pudo guardar el pago', firebaseError.message);
-    } finally {
-      setSavingSaleId('');
-    }
-  }
-
-  async function handleSavePayment(saleId, paymentId) {
-    const paymentForm = getForm(saleId);
-
-    if (!paymentForm.monto.trim()) {
-      Alert.alert('Falta el monto', 'Escribe cuánto pagó el cliente.');
-      return;
-    }
-
-    try {
-      setSavingSaleId(saleId);
-      await updatePayment(saleId, paymentId, paymentForm);
-      setEditingPaymentId('');
-      setPaymentForms((currentForms) => ({
-        ...currentForms,
-        [saleId]: {
-          monto: '',
-          metodo_pago: '',
-          fecha_pago: today,
-          notas: '',
-        },
-      }));
-    } catch (firebaseError) {
-      Alert.alert('No se pudo actualizar el pago', firebaseError.message);
+      Alert.alert('No se pudo guardar el abono', firebaseError.message);
     } finally {
       setSavingSaleId('');
     }
@@ -194,8 +177,36 @@ export default function PaymentsScreen() {
     }));
   }
 
+  async function handleSavePayment(saleId, paymentId) {
+    const form = getForm(saleId);
+
+    if (!form.monto.trim()) {
+      Alert.alert('Falta el monto', 'Escribe el valor del abono.');
+      return;
+    }
+
+    try {
+      setSavingSaleId(saleId);
+      await updatePayment(saleId, paymentId, form);
+      setEditingPaymentId('');
+      setPaymentForms((currentForms) => ({
+        ...currentForms,
+        [saleId]: {
+          monto: '',
+          metodo_pago: '',
+          fecha_pago: today,
+          notas: '',
+        },
+      }));
+    } catch (firebaseError) {
+      Alert.alert('No se pudo actualizar el abono', firebaseError.message);
+    } finally {
+      setSavingSaleId('');
+    }
+  }
+
   function handleDeletePayment(saleId, paymentId) {
-    Alert.alert('Borrar pago', 'El pago se eliminará y la deuda se recalculará.', [
+    Alert.alert('Borrar abono', '¿Estás seguro de que quieres eliminar este abono?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Borrar',
@@ -222,23 +233,49 @@ export default function PaymentsScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.kicker}>Transacciones</Text>
-      <Text style={styles.title}>Cuentas por Cobrar</Text>
-      <Text style={styles.subtitle}>
-        Gestiona y registra abonos a ventas pendientes. El estado del pago se actualiza de forma automática.
-      </Text>
+      {/* Header Ledger Block */}
+      <View style={styles.headerBlock}>
+        <View style={styles.headerIconCircle}>
+          <Feather name="credit-card" size={24} color={colors.gold} />
+        </View>
+        <Text style={styles.kicker}>TRANSACCIONES & COBRANZA</Text>
+        <Text style={styles.title}>Cuentas por Cobrar</Text>
+        <Text style={styles.subtitle}>
+          Registra abonos directos y supervisa el balance de pagos pendientes en tiempo real.
+        </Text>
+      </View>
+
+      {/* Global Balance Card */}
+      <View style={styles.balanceCard}>
+        <View style={styles.balanceInfo}>
+          <Text style={styles.balanceLabel}>SALDO GLOBAL POR COBRAR</Text>
+          <Text style={styles.balanceValue}>${overallPendingTotal}</Text>
+          <Text style={styles.balanceSub}>
+            Distribuido en {sales.length} venta(s) activas
+          </Text>
+        </View>
+        <View style={styles.balanceCrestWrap}>
+          <Feather name="shield" size={28} color={colors.gold} />
+        </View>
+      </View>
 
       {!!error && (
-        <View style={styles.messageBox}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View style={styles.errorAlert}>
+          <Feather name="alert-circle" size={16} color={colors.rose} />
+          <Text style={styles.errorAlertText}>{error}</Text>
         </View>
       )}
 
+      {/* Pending Sales List */}
       {sales.length === 0 ? (
-        <View style={styles.emptyPanel}>
-          <Feather name="check-circle" size={24} color={colors.success} style={{ marginBottom: 8 }} />
-          <Text style={styles.emptyText}>No hay ventas pendientes de pago. ¡Todo al corriente!</Text>
+        <View style={styles.emptyCard}>
+          <Feather name="check-circle" size={32} color={colors.success} style={{ marginBottom: 8 }} />
+          <Text style={styles.emptyTitle}>¡Todo al corriente!</Text>
+          <Text style={styles.emptySub}>
+            No hay cuentas pendientes de cobro registradas.
+          </Text>
         </View>
       ) : (
         sales.map((sale) => {
@@ -247,120 +284,176 @@ export default function PaymentsScreen() {
           const isExpanded = expandedSaleId === sale.id;
 
           return (
-            <View key={sale.id} style={[styles.panel, isExpanded && styles.panelExpanded]}>
+            <View key={sale.id} style={[styles.saleCard, isExpanded && styles.saleCardExpanded]}>
               <Pressable
                 onPress={() => setExpandedSaleId(isExpanded ? '' : sale.id)}
                 style={styles.saleHeader}
               >
-                <View style={styles.headerInfo}>
-                  <Text style={styles.saleTitle}>{getClientName(sale.cliente_id)}</Text>
-                  <View style={styles.textDetailRow}>
-                    <Feather name="calendar" size={11} color={colors.textSubtle} />
-                    <Text style={styles.saleText}>{formatDateValue(sale.fecha_venta)}</Text>
-                    <Text style={styles.dividerDot}>·</Text>
-                    <Feather name="alert-circle" size={11} color={colors.gold} />
-                    <Text style={[styles.saleText, { color: colors.gold, fontWeight: '700' }]}>resta ${summary.remaining}</Text>
+                <View style={styles.saleHeaderLeft}>
+                  <Text style={styles.clientName}>{getClientName(sale.cliente_id)}</Text>
+                  <Text style={styles.perfumeNames}>{getSalePerfumeNames(sale.id)}</Text>
+
+                  {/* Progress Mini Bar */}
+                  <View style={styles.progressBarTrack}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${summary.percent}%` },
+                      ]}
+                    />
                   </View>
-                  <Text style={styles.salePerfume}>{getSalePerfumeNames(sale.id)}</Text>
+
+                  <View style={styles.metaRow}>
+                    <Feather name="calendar" size={10} color={colors.textSubtle} />
+                    <Text style={styles.metaText}>{formatDateValue(sale.fecha_venta)}</Text>
+                    <Text style={styles.metaDivider}>·</Text>
+                    <Text style={styles.percentText}>{summary.percent}% abonado</Text>
+                  </View>
                 </View>
-                <View style={styles.badgeContainer}>
-                  <Text style={styles.badgeText}>{sale.estado_pago?.toUpperCase()}</Text>
-                  <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.ink} style={{ marginLeft: 4 }} />
+
+                <View style={styles.saleHeaderRight}>
+                  <Text style={styles.remainingAmount}>${summary.remaining}</Text>
+                  <Text style={styles.remainingCaption}>resta por pagar</Text>
+                  <View style={styles.expandChevron}>
+                    <Feather
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={14}
+                      color={colors.gold}
+                    />
+                  </View>
                 </View>
               </Pressable>
 
+              {/* Expanded Ledger Panel */}
               {isExpanded && (
-                <View style={styles.expandedContent}>
-                  <View style={styles.breakdown}>
-                    <BreakdownItem label="Total Venta" value={`$${sale.total || 0}`} />
-                    <BreakdownItem label="Abonado" value={`$${summary.totalPaid}`} color={colors.success} />
-                    <BreakdownItem label="Saldo Pendiente" value={`$${summary.remaining}`} highlight />
+                <View style={styles.expandedVault}>
+                  {/* Financial Mini Rail */}
+                  <View style={styles.miniRail}>
+                    <View style={styles.miniRailCard}>
+                      <Text style={styles.miniRailLabel}>TOTAL VENTA</Text>
+                      <Text style={styles.miniRailValue}>${sale.total || 0}</Text>
+                    </View>
+                    <View style={styles.miniRailCard}>
+                      <Text style={styles.miniRailLabel}>ABONADO</Text>
+                      <Text style={[styles.miniRailValue, { color: colors.success }]}>
+                        ${summary.totalPaid}
+                      </Text>
+                    </View>
+                    <View style={[styles.miniRailCard, { borderColor: colors.rose }]}>
+                      <Text style={[styles.miniRailLabel, { color: colors.rose }]}>
+                        SALDO RESTANTE
+                      </Text>
+                      <Text style={[styles.miniRailValue, { color: colors.rose }]}>
+                        ${summary.remaining}
+                      </Text>
+                    </View>
                   </View>
 
-                  <Text style={styles.sectionTitle}>Historial de Abonos</Text>
+                  {/* Abonos History */}
+                  <Text style={styles.sectionSubtitle}>HISTORIAL DE ABONOS</Text>
                   {summary.salePayments.length === 0 ? (
-                    <Text style={styles.emptyTextSmall}>No se han registrado abonos para esta venta.</Text>
+                    <Text style={styles.emptyNote}>
+                      Aún no hay abonos registrados para esta venta.
+                    </Text>
                   ) : (
                     summary.salePayments.map((payment) => (
                       <View key={payment.id} style={styles.paymentRow}>
-                        <View style={styles.paymentRowHeader}>
-                          <View>
-                            <Text style={styles.paymentAmount}>${payment.monto || 0}</Text>
-                            <Text style={styles.paymentText}>
-                              {formatDateValue(payment.fecha_pago)}  ·  {payment.metodo_pago || 'Sin método'}
+                        <View style={styles.paymentInfo}>
+                          <View style={styles.paymentAmountLine}>
+                            <Text style={styles.paymentAmountText}>+${payment.monto || 0}</Text>
+                            <Text style={styles.paymentMethodText}>
+                              {payment.metodo_pago?.toUpperCase() || 'PAGO DIRECTO'}
                             </Text>
                           </View>
-                          <View style={styles.paymentActions}>
-                            <Pressable onPress={() => startEditPayment(sale.id, payment)} style={styles.smallButton}>
-                              <Feather name="edit-2" size={11} color={colors.ink} />
-                            </Pressable>
-                            <Pressable onPress={() => handleDeletePayment(sale.id, payment.id)} style={styles.smallButtonDark}>
-                              <Feather name="trash-2" size={11} color={colors.textMuted} />
-                            </Pressable>
-                          </View>
+                          <Text style={styles.paymentDateText}>
+                            {formatDateValue(payment.fecha_pago)}
+                          </Text>
+                          {!!payment.notas && (
+                            <Text style={styles.paymentNotesText}>{payment.notas}</Text>
+                          )}
                         </View>
-                        {!!payment.notes && (
-                          <View style={styles.notesContainer}>
-                            <Text style={styles.paymentNote}>{payment.notes}</Text>
-                          </View>
-                        )}
+
+                        <View style={styles.paymentActionButtons}>
+                          <AnimatedPressable
+                            onPress={() => startEditPayment(sale.id, payment)}
+                            style={styles.actionMiniBtn}
+                            scaleTo={0.9}
+                          >
+                            <Feather name="edit-2" size={11} color={colors.ink} />
+                          </AnimatedPressable>
+                          <AnimatedPressable
+                            onPress={() => handleDeletePayment(sale.id, payment.id)}
+                            style={styles.actionMiniBtnDark}
+                            scaleTo={0.9}
+                          >
+                            <Feather name="trash-2" size={11} color={colors.textSubtle} />
+                          </AnimatedPressable>
+                        </View>
                       </View>
                     ))
                   )}
 
-                  <Text style={styles.sectionTitle}>
-                    {editingPaymentId ? 'Modificar Abono' : 'Registrar Nuevo Abono'}
-                  </Text>
-                  
-                  <FormInput
-                    label="Monto del abono"
-                    value={paymentForm.monto}
-                    onChangeText={(value) => updatePaymentField(sale.id, 'monto', value)}
-                    placeholder="Ej. 200"
-                    keyboardType="numeric"
-                  />
-                  <FormInput
-                    label="Método de pago"
-                    value={paymentForm.metodo_pago}
-                    onChangeText={(value) => updatePaymentField(sale.id, 'metodo_pago', value)}
-                    placeholder="Efectivo, transferencia, tarjeta..."
-                  />
-                  <CalendarDatePicker
-                    label="Fecha del abono"
-                    value={paymentForm.fecha_pago}
-                    onChange={(value) => updatePaymentField(sale.id, 'fecha_pago', value)}
-                  />
-                  <FormInput
-                    label="Notas opcionales"
-                    value={paymentForm.notas}
-                    onChangeText={(value) => updatePaymentField(sale.id, 'notas', value)}
-                    placeholder="Escribe comentarios sobre el abono"
-                  />
-                  
-                  <View style={styles.formActionButtons}>
-                    <PrimaryButton
-                      title={
-                        savingSaleId === sale.id
-                          ? 'Guardando...'
-                          : editingPaymentId
-                            ? 'Actualizar abono'
-                            : 'Registrar abono'
-                      }
-                      onPress={() =>
-                        editingPaymentId
-                          ? handleSavePayment(sale.id, editingPaymentId)
-                          : handleAddPayment(sale.id)
-                      }
-                      disabled={savingSaleId === sale.id}
+                  {/* New/Edit Abono Form */}
+                  <View style={styles.abonoFormCard}>
+                    <Text style={styles.formCardHeading}>
+                      {editingPaymentId ? 'MODIFICAR ABONO SELECCIONADO' : 'REGISTRAR NUEVO ABONO'}
+                    </Text>
+
+                    <FormInput
+                      label="Monto del Abono ($ MXN) *"
+                      value={paymentForm.monto}
+                      onChangeText={(val) => updatePaymentField(sale.id, 'monto', val)}
+                      placeholder="Ej. 200"
+                      keyboardType="numeric"
                     />
-                    
-                    <View style={styles.cancelSaleButton}>
+
+                    <FormInput
+                      label="Método de Pago"
+                      value={paymentForm.metodo_pago}
+                      onChangeText={(val) => updatePaymentField(sale.id, 'metodo_pago', val)}
+                      placeholder="Efectivo, Transferencia SPEI, Tarjeta..."
+                    />
+
+                    <CalendarDatePicker
+                      label="Fecha del Abono"
+                      value={paymentForm.fecha_pago}
+                      onChange={(val) => updatePaymentField(sale.id, 'fecha_pago', val)}
+                    />
+
+                    <FormInput
+                      label="Notas del Abono"
+                      value={paymentForm.notas}
+                      onChangeText={(val) => updatePaymentField(sale.id, 'notas', val)}
+                      placeholder="Comentarios adicionales"
+                    />
+
+                    <View style={styles.submitAbonoRow}>
                       <PrimaryButton
-                        title="Cancelar esta venta"
-                        onPress={() => handleCancelSale(sale.id)}
-                        variant="secondary"
+                        title={
+                          savingSaleId === sale.id
+                            ? 'Guardando...'
+                            : editingPaymentId
+                              ? 'Actualizar Abono'
+                              : 'Registrar Abono'
+                        }
+                        onPress={() =>
+                          editingPaymentId
+                            ? handleSavePayment(sale.id, editingPaymentId)
+                            : handleAddPayment(sale.id)
+                        }
+                        disabled={savingSaleId === sale.id}
+                        variant="amber"
                       />
                     </View>
+                  </View>
+
+                  {/* Cancel Sale Option */}
+                  <View style={{ marginTop: 12 }}>
+                    <PrimaryButton
+                      title="Cancelar Esta Venta (Reactivar Stock)"
+                      onPress={() => handleCancelSale(sale.id)}
+                      variant="outline"
+                    />
                   </View>
                 </View>
               )}
@@ -372,19 +465,6 @@ export default function PaymentsScreen() {
   );
 }
 
-function BreakdownItem({ label, value, highlight = false, color = colors.text }) {
-  return (
-    <View style={[styles.breakdownItem, highlight && styles.breakdownHighlight]}>
-      <Text style={[styles.breakdownLabel, highlight && styles.breakdownLabelHighlight]}>
-        {label}
-      </Text>
-      <Text style={[styles.breakdownValue, highlight && styles.breakdownValueHighlight, { color: highlight ? colors.ink : color }]}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -392,236 +472,333 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 160,
+    paddingBottom: 110,
+  },
+  headerBlock: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    paddingTop: 8,
+  },
+  headerIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
+    borderWidth: 1.5,
+    borderColor: colors.amber,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.8,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
   subtitle: {
     color: colors.textSubtle,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    paddingHorizontal: 12,
   },
-  panel: {
+  balanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
+    borderColor: colors.lineStrong,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.card,
   },
-  panelExpanded: {
-    borderColor: colors.lineStrong,
+  balanceInfo: {
+    flex: 1,
   },
-  emptyPanel: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.xl,
+  balanceLabel: {
+    color: colors.amber,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  balanceValue: {
+    color: colors.text,
+    fontSize: 32,
+    fontWeight: '900',
+  },
+  balanceSub: {
+    color: colors.textSubtle,
+    fontSize: 11,
+    marginTop: 4,
+  },
+  balanceCrestWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.1)',
+    borderWidth: 1.5,
+    borderColor: colors.amber,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
+  },
+  errorAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorAlertText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    ...shadow.card,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  emptySub: {
+    color: colors.textSubtle,
+    fontSize: 13,
+  },
+  saleCard: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    marginBottom: 10,
+    overflow: 'hidden',
+    ...shadow.card,
+  },
+  saleCardExpanded: {
+    borderColor: colors.amber,
   },
   saleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    padding: spacing.md,
   },
-  headerInfo: {
+  saleHeaderLeft: {
     flex: 1,
+    marginRight: 12,
   },
-  saleTitle: {
+  clientName: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.2,
   },
-  textDetailRow: {
+  perfumeNames: {
+    color: colors.amber,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  progressBarTrack: {
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.lineStrong,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.petroleum,
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
   },
-  saleText: {
+  metaText: {
     color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
   },
-  dividerDot: {
+  metaDivider: {
     color: colors.textSubtle,
-    fontSize: 12,
+    fontSize: 11,
   },
-  salePerfume: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
+  percentText: {
+    color: colors.petroleum,
+    fontSize: 11,
+    fontWeight: '800',
   },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderRadius: radius.sm - 2,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    ...shadow.glow,
+  saleHeaderRight: {
+    alignItems: 'flex-end',
   },
-  badgeText: {
-    color: colors.ink,
-    fontSize: 10,
+  remainingAmount: {
+    color: colors.danger,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 0.5,
   },
-  expandedContent: {
-    marginTop: spacing.md,
+  remainingCaption: {
+    color: colors.textSubtle,
+    fontSize: 9,
+    textTransform: 'uppercase',
+  },
+  expandChevron: {
+    marginTop: 4,
+  },
+  expandedVault: {
+    padding: spacing.md,
+    backgroundColor: colors.field,
     borderTopWidth: 1,
-    borderTopColor: colors.lineSoft,
-    paddingTop: spacing.md,
+    borderTopColor: colors.lineStrong,
   },
-  breakdown: {
+  miniRail: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     marginBottom: spacing.md,
   },
-  breakdownItem: {
+  miniRailCard: {
     flex: 1,
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.line,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: 10,
-  },
-  breakdownHighlight: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    ...shadow.glow,
-  },
-  breakdownLabel: {
-    color: colors.textSubtle,
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 4,
-  },
-  breakdownLabelHighlight: {
-    color: colors.ink,
-    opacity: 0.8,
-  },
-  breakdownValue: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  breakdownValueHighlight: {
-    fontWeight: '900',
-  },
-  sectionTitle: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '850',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  paymentRow: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
-    marginBottom: 8,
-  },
-  paymentRowHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderColor: colors.lineStrong,
+    padding: 8,
     alignItems: 'center',
   },
-  paymentAmount: {
+  miniRailLabel: {
+    color: colors.amber,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  miniRailValue: {
     color: colors.text,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
   },
-  paymentText: {
-    color: colors.textSubtle,
-    fontSize: 11,
-    marginTop: 2,
+  sectionSubtitle: {
+    color: colors.amber,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 8,
   },
-  notesContainer: {
-    marginTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: colors.lineSoft,
-    paddingTop: 4,
-  },
-  paymentNote: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontStyle: 'italic',
-  },
-  paymentActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  smallButton: {
-    width: 28,
-    height: 28,
-    backgroundColor: colors.gold,
-    borderRadius: radius.sm - 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  smallButtonDark: {
-    width: 28,
-    height: 28,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm - 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  formActionButtons: {
-    gap: 10,
-    marginTop: spacing.sm,
-  },
-  cancelSaleButton: {
-    marginTop: 2,
-  },
-  emptyText: {
-    color: colors.textSubtle,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  emptyTextSmall: {
+  emptyNote: {
     color: colors.textSubtle,
     fontSize: 12,
-    marginBottom: spacing.sm,
+    fontStyle: 'italic',
+    marginBottom: 10,
   },
-  messageBox: {
-    backgroundColor: colors.dangerSurface,
-    borderColor: colors.dangerLine,
+  paymentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
+    padding: 10,
+    marginBottom: 6,
     borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    borderColor: colors.lineStrong,
   },
-  errorText: {
-    color: colors.danger,
-    fontSize: 13,
-    fontWeight: '700',
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentAmountLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentAmountText: {
+    color: colors.success,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  paymentMethodText: {
+    color: colors.petroleum,
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  paymentDateText: {
+    color: colors.textSubtle,
+    fontSize: 10,
+  },
+  paymentNotesText: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  paymentActionButtons: {
+    flexDirection: 'row',
+    gap: 6,
+    marginLeft: 8,
+  },
+  actionMiniBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.xs,
+    backgroundColor: colors.field,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionMiniBtnDark: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.xs,
+    backgroundColor: colors.dangerSurface,
+    borderWidth: 1,
+    borderColor: colors.dangerLine,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  abonoFormCard: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  formCardHeading: {
+    color: colors.amber,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  submitAbonoRow: {
+    marginTop: 8,
   },
 });

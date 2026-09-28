@@ -84,7 +84,6 @@ export default function CalendarDatePicker({ label, value, onChange }) {
   const [openPicker, setOpenPicker] = useState('');
   const selectedValue = value || getLocalDateString();
   const selectedDate = parseDateString(selectedValue);
-  const monthTitle = `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
   const days = useMemo(() => getCalendarDays(selectedValue), [selectedValue]);
   const yearOptions = useMemo(() => {
     const selectedYear = selectedDate.getFullYear();
@@ -142,7 +141,7 @@ export default function CalendarDatePicker({ label, value, onChange }) {
           }}
           style={styles.iconButton}
         >
-          <Feather name="chevron-left" size={16} color={colors.text} />
+          <Feather name="chevron-left" size={16} color={colors.gold} />
         </Pressable>
         <View style={styles.monthTitleRow}>
           <Pressable onPress={() => setOpenPicker(openPicker === 'month' ? '' : 'month')}>
@@ -159,7 +158,7 @@ export default function CalendarDatePicker({ label, value, onChange }) {
           }}
           style={styles.iconButton}
         >
-          <Feather name="chevron-right" size={16} color={colors.text} />
+          <Feather name="chevron-right" size={16} color={colors.gold} />
         </Pressable>
       </View>
 
@@ -249,12 +248,13 @@ export default function CalendarDatePicker({ label, value, onChange }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(166, 136, 100, 0.28)',
     padding: spacing.md,
     marginBottom: spacing.md,
+    ...shadow.card,
   },
   header: {
     flexDirection: 'row',
@@ -264,17 +264,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   label: {
-    color: colors.gold,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  value: {
-    color: colors.text,
-    fontSize: 18,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
   valueParts: {
     flexDirection: 'row',
@@ -282,30 +277,30 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   valuePart: {
-    minHeight: 30,
-    borderRadius: radius.sm - 4,
-    backgroundColor: colors.surfaceCard,
+    minHeight: 32,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     justifyContent: 'center',
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
   },
   valuePartText: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   todayButton: {
     minHeight: 32,
-    borderRadius: radius.sm - 4,
-    backgroundColor: colors.gold,
+    borderRadius: radius.pill,
+    backgroundColor: colors.petroleum,
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   todayButtonText: {
-    color: colors.ink,
+    color: colors.white,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   monthHeader: {
     flexDirection: 'row',
@@ -316,10 +311,10 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 34,
     height: 34,
-    borderRadius: radius.sm - 4,
-    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -341,42 +336,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    backgroundColor: colors.surfaceCard,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm,
+    borderColor: colors.lineStrong,
+    borderRadius: radius.md,
     padding: spacing.sm,
     marginBottom: spacing.sm,
   },
   quickOption: {
     width: '23.5%',
     minHeight: 32,
-    borderRadius: radius.sm - 4,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayQuickOption: {
     width: `${100 / 7 - 1}%`,
     minHeight: 28,
-    borderRadius: radius.sm - 5,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickOptionActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
   },
   quickOptionText: {
     color: colors.textSubtle,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   quickOptionTextActive: {
-    color: colors.ink,
+    color: colors.white,
+    fontWeight: '900',
   },
   dayLabelRow: {
     flexDirection: 'row',
@@ -384,8 +380,8 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     flex: 1,
-    color: colors.textSubtle,
-    fontSize: 10,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     textAlign: 'center',
   },
@@ -399,7 +395,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm - 5,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -410,12 +406,11 @@ const styles = StyleSheet.create({
     borderColor: colors.lineStrong,
   },
   dayButtonActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    ...shadow.glow,
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
   },
   dayText: {
-    color: colors.textMuted,
+    color: colors.text,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -423,6 +418,7 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
   },
   dayTextActive: {
-    color: colors.ink,
+    color: colors.white,
+    fontWeight: '900',
   },
 });

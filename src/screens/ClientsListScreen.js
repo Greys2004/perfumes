@@ -56,7 +56,7 @@ export default function ClientsListScreen({ navigation }) {
           onPress={() => navigation.navigate('ClientForm')}
           style={styles.addButton}
         >
-          <Feather name="user-plus" size={15} color={colors.ink} style={{ marginRight: 4 }} />
+          <Feather name="user-plus" size={15} color={colors.white} style={{ marginRight: 6 }} />
           <Text style={styles.addButtonText}>Agregar</Text>
         </AnimatedPressable>
       </View>
@@ -83,8 +83,9 @@ export default function ClientsListScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Feather name="users" size={24} color={colors.textSubtle} style={{ marginBottom: 8 }} />
-              <Text style={styles.emptyText}>Todavía no hay clientes registrados.</Text>
+              <Feather name="users" size={28} color={colors.gold} style={{ marginBottom: 8 }} />
+              <Text style={styles.emptyTitle}>Sin clientes registrados</Text>
+              <Text style={styles.emptyText}>Agrega nuevos clientes para gestionar sus ventas y estados de cuenta.</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -129,27 +130,27 @@ function ClientCard({ client, onPress, onEdit, onDelete }) {
           <Text style={styles.cardTitle}>{client.nombre}</Text>
           {!!client.telefono && (
             <View style={styles.contactRow}>
-              <Feather name="phone" size={11} color={colors.gold} />
+              <Feather name="phone" size={12} color={colors.gold} />
               <Text style={styles.cardText}>{client.telefono}</Text>
             </View>
           )}
           {!!client.email && (
             <View style={styles.contactRow}>
-              <Feather name="mail" size={11} color={colors.textSubtle} />
+              <Feather name="mail" size={12} color={colors.goldMuted} />
               <Text style={styles.cardText}>{client.email}</Text>
             </View>
           )}
         </View>
-        <Feather name="chevron-right" size={18} color={colors.textSubtle} />
+        <Feather name="chevron-right" size={18} color={colors.gold} />
       </View>
 
       <View style={styles.cardFooter}>
         <Pressable onPress={onEdit} style={styles.actionButton}>
-          <Feather name="edit-2" size={12} color={colors.ink} style={{ marginRight: 4 }} />
+          <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
           <Text style={styles.actionButtonText}>Editar</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Feather name="user-minus" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+          <Feather name="user-minus" size={13} color={colors.rose} style={{ marginRight: 5 }} />
           <Text style={styles.actionButtonTextLight}>Quitar</Text>
         </Pressable>
       </View>
@@ -171,32 +172,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: 4,
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderRadius: radius.sm,
-    paddingHorizontal: 14,
-    minHeight: 38,
-    ...shadow.glow,
+    backgroundColor: colors.petroleum,
+    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    minHeight: 40,
+    ...shadow.card,
   },
   addButtonText: {
-    color: colors.ink,
-    fontSize: 12,
-    fontWeight: '900',
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '800',
   },
   loader: {
     marginTop: 36,
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerSurface,
     borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
@@ -215,24 +216,37 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 110,
   },
   emptyContainer: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 36,
+    marginTop: spacing.md,
+    ...shadow.card,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 4,
   },
   emptyText: {
-    color: colors.textSubtle,
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: 13,
     textAlign: 'center',
+    lineHeight: 19,
   },
   card: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
+    borderColor: 'rgba(166, 136, 100, 0.28)',
+    padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.card,
   },
@@ -244,15 +258,16 @@ const styles = StyleSheet.create({
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    borderRadius: radius.pill,
+    backgroundColor: colors.petroleum,
+    borderWidth: 1.5,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.glow,
   },
   avatarText: {
-    color: colors.ink,
-    fontSize: 20,
+    color: colors.goldLight,
+    fontSize: 18,
     fontWeight: '900',
   },
   cardInfo: {
@@ -260,19 +275,20 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.2,
   },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 3,
+    marginTop: 4,
   },
   cardText: {
-    color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -284,32 +300,34 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    minHeight: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonDark: {
     flex: 1,
-    minHeight: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSurface,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.dangerLine,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonText: {
-    color: colors.ink,
-    fontSize: 11,
-    fontWeight: '900',
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
   },
   actionButtonTextLight: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: '900',
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

@@ -43,34 +43,18 @@ function getPerfumeSearchText(perfume) {
   ].join(' '));
 }
 
-function getSuggestionDetail(perfume, searchText) {
-  if (normalizeText(perfume.marca).includes(searchText)) {
-    return `Marca: ${perfume.marca}`;
-  }
-
-  if (normalizeText(perfume.categoria_perfume).includes(searchText)) {
-    return `Tipo: ${perfume.categoria_perfume}`;
-  }
-
-  if (normalizeText(perfume.genero_perfume).includes(searchText)) {
-    return `Genero: ${perfume.genero_perfume}`;
-  }
-
-  return perfume.marca || perfume.categoria_perfume || 'Perfume';
-}
-
 const typeFilters = [
   { label: 'Todos', value: 'all' },
-  { label: 'Diseñador', value: 'diseñador' },
   { label: 'Nicho', value: 'nicho' },
-  { label: 'Arabe', value: 'arabe' },
+  { label: 'Diseñador', value: 'diseñador' },
+  { label: 'Árabe', value: 'arabe' },
 ];
 
 const genderFilters = [
   { label: 'Todos', value: 'all' },
-  { label: 'Mujer', value: 'mujer' },
-  { label: 'Hombre', value: 'hombre' },
   { label: 'Unisex', value: 'unisex' },
+  { label: 'Hombre', value: 'hombre' },
+  { label: 'Mujer', value: 'mujer' },
 ];
 
 export default function PerfumesListScreen({ navigation }) {
@@ -118,44 +102,39 @@ export default function PerfumesListScreen({ navigation }) {
       return matchesSearch && matchesType && matchesGender && matchesBrand;
     });
   }, [perfumes, searchText, selectedBrand, selectedGender, selectedType]);
+
   const availableBrands = useMemo(() => {
     const brands = [...new Set(perfumes.map((perfume) => perfume.marca).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
     const normalizedBrandSearch = normalizeText(brandSearch);
 
     if (!normalizedBrandSearch) {
-      return brands.slice(0, 8);
+      return brands.slice(0, 10);
     }
 
-    return brands.filter((brand) => normalizeText(brand).includes(normalizedBrandSearch)).slice(0, 8);
+    return brands.filter((brand) => normalizeText(brand).includes(normalizedBrandSearch)).slice(0, 10);
   }, [brandSearch, perfumes]);
+
   const activeFiltersCount = [
     selectedType !== 'all',
     selectedGender !== 'all',
     selectedBrand !== 'all',
   ].filter(Boolean).length;
-  const suggestions = useMemo(() => {
-    if (!searchText) {
-      return [];
-    }
-
-    return perfumes
-      .filter((perfume) => getPerfumeSearchText(perfume).includes(searchText))
-      .slice(0, 6);
-  }, [perfumes, searchText]);
 
   return (
     <View style={styles.container}>
+      {/* Header Bar */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.kicker}>Catálogo Interno</Text>
-          <Text style={styles.title}>Perfumes</Text>
+          <Text style={styles.kicker}>Gestión de Fragancias</Text>
+          <Text style={styles.title}>Catálogo de Stock</Text>
         </View>
         <AnimatedPressable
           onPress={() => navigation.navigate('PerfumeForm')}
           style={styles.addButton}
+          scaleTo={0.94}
         >
-          <Feather name="plus" size={16} color={colors.ink} style={styles.addIcon} />
+          <Feather name="plus" size={16} color={colors.white} style={{ marginRight: 6 }} />
           <Text style={styles.addButtonText}>Agregar</Text>
         </AnimatedPressable>
       </View>
@@ -163,36 +142,37 @@ export default function PerfumesListScreen({ navigation }) {
       <SearchBar
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar perfume..."
+        placeholder="Buscar perfume, marca, familia olfativa..."
       />
 
-      <Pressable onPress={() => setFiltersOpen((open) => !open)} style={styles.filterToggle}>
-        <View style={styles.filterToggleLeft}>
+      {/* Filter Trigger */}
+      <Pressable onPress={() => setFiltersOpen((open) => !open)} style={styles.filterBarButton}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Feather name="sliders" size={14} color={colors.gold} />
-          <Text style={styles.filterToggleText}>Filtros</Text>
+          <Text style={styles.filterBarButtonText}>Filtrar Inventario</Text>
           {activeFiltersCount > 0 && (
             <View style={styles.filterCountBadge}>
-              <Text style={styles.filterCountText}>{activeFiltersCount}</Text>
+              <Text style={styles.filterCountBadgeText}>{activeFiltersCount}</Text>
             </View>
           )}
         </View>
-        <Feather name={filtersOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSubtle} />
+        <Feather name={filtersOpen ? 'chevron-up' : 'chevron-down'} size={15} color={colors.gold} />
       </Pressable>
 
+      {/* Filter Drawer */}
       {filtersOpen && (
-        <View style={styles.filtersPanel}>
-          <Text style={styles.filterLabel}>Tipo</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+        <View style={styles.filtersDrawer}>
+          <Text style={styles.filterSectionTitle}>Familia / Tipo</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
             {typeFilters.map((filter) => {
-              const selected = selectedType === filter.value;
-
+              const active = selectedType === filter.value;
               return (
                 <Pressable
                   key={filter.value}
                   onPress={() => setSelectedType(filter.value)}
-                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                  style={[styles.luxuryChip, active && styles.luxuryChipActive]}
                 >
-                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                  <Text style={[styles.luxuryChipText, active && styles.luxuryChipTextActive]}>
                     {filter.label}
                   </Text>
                 </Pressable>
@@ -200,18 +180,17 @@ export default function PerfumesListScreen({ navigation }) {
             })}
           </ScrollView>
 
-          <Text style={styles.filterLabel}>Genero</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+          <Text style={styles.filterSectionTitle}>Género</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
             {genderFilters.map((filter) => {
-              const selected = selectedGender === filter.value;
-
+              const active = selectedGender === filter.value;
               return (
                 <Pressable
                   key={filter.value}
                   onPress={() => setSelectedGender(filter.value)}
-                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                  style={[styles.luxuryChip, active && styles.luxuryChipActive]}
                 >
-                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                  <Text style={[styles.luxuryChipText, active && styles.luxuryChipTextActive]}>
                     {filter.label}
                   </Text>
                 </Pressable>
@@ -219,31 +198,30 @@ export default function PerfumesListScreen({ navigation }) {
             })}
           </ScrollView>
 
-          <Text style={styles.filterLabel}>Marca</Text>
+          <Text style={styles.filterSectionTitle}>Casa / Marca</Text>
           <SearchBar
             value={brandSearch}
             onChangeText={setBrandSearch}
             placeholder="Buscar marca..."
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
             <Pressable
               onPress={() => setSelectedBrand('all')}
-              style={[styles.filterChip, selectedBrand === 'all' && styles.filterChipActive]}
+              style={[styles.luxuryChip, selectedBrand === 'all' && styles.luxuryChipActive]}
             >
-              <Text style={[styles.filterChipText, selectedBrand === 'all' && styles.filterChipTextActive]}>
+              <Text style={[styles.luxuryChipText, selectedBrand === 'all' && styles.luxuryChipTextActive]}>
                 Todas
               </Text>
             </Pressable>
             {availableBrands.map((brand) => {
-              const selected = selectedBrand === brand;
-
+              const active = selectedBrand === brand;
               return (
                 <Pressable
                   key={brand}
                   onPress={() => setSelectedBrand(brand)}
-                  style={[styles.filterChip, selected && styles.filterChipActive]}
+                  style={[styles.luxuryChip, active && styles.luxuryChipActive]}
                 >
-                  <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                  <Text style={[styles.luxuryChipText, active && styles.luxuryChipTextActive]}>
                     {brand}
                   </Text>
                 </Pressable>
@@ -259,38 +237,20 @@ export default function PerfumesListScreen({ navigation }) {
                 setSelectedBrand('all');
                 setBrandSearch('');
               }}
-              style={styles.clearFiltersButton}
+              style={styles.resetFiltersBtn}
             >
-              <Feather name="x" size={13} color={colors.ink} />
-              <Text style={styles.clearFiltersText}>Limpiar filtros</Text>
+              <Feather name="rotate-ccw" size={12} color={colors.ink} style={{ marginRight: 6 }} />
+              <Text style={styles.resetFiltersBtnText}>Restablecer</Text>
             </Pressable>
           )}
-        </View>
-      )}
-
-      {suggestions.length > 0 && (
-        <View style={styles.suggestionsWrap}>
-          {suggestions.map((perfume) => (
-            <Pressable
-              key={perfume.id}
-              onPress={() => setSearch(perfume.nombre)}
-              style={styles.suggestionPill}
-            >
-              <Feather name="corner-down-right" size={12} color={colors.gold} />
-              <View>
-                <Text style={styles.suggestionText}>{perfume.nombre}</Text>
-                <Text style={styles.suggestionDetail}>{getSuggestionDetail(perfume, searchText)}</Text>
-              </View>
-            </Pressable>
-          ))}
         </View>
       )}
 
       {loading && <ActivityIndicator color={colors.gold} style={styles.loader} size="large" />}
 
       {!!error && (
-        <View style={styles.messageBox}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error}</Text>
         </View>
       )}
 
@@ -301,9 +261,10 @@ export default function PerfumesListScreen({ navigation }) {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Feather name="folder-open" size={24} color={colors.textSubtle} style={{ marginBottom: 8 }} />
-              <Text style={styles.emptyText}>Todavía no hay perfumes registrados.</Text>
+            <View style={styles.emptyCard}>
+              <Feather name="box" size={32} color={colors.gold} style={{ marginBottom: 8 }} />
+              <Text style={styles.emptyCardTitle}>No hay perfumes registrados</Text>
+              <Text style={styles.emptyCardSub}>Toca en "Agregar" para registrar una nueva fragancia.</Text>
             </View>
           }
           ListFooterComponent={
@@ -331,12 +292,12 @@ export default function PerfumesListScreen({ navigation }) {
               onEdit={() => navigation.navigate('PerfumeForm', { perfume: item })}
               onDelete={() => {
                 Alert.alert(
-                  'Desactivar perfume',
-                  'El perfume no se borrará definitivamente, solo dejará de aparecer activo.',
+                  'Ocultar perfume',
+                  'El perfume no se borrará definitivamente, solo se ocultará temporalmente.',
                   [
                     { text: 'Cancelar', style: 'cancel' },
                     {
-                      text: 'Desactivar',
+                      text: 'Ocultar',
                       style: 'destructive',
                       onPress: () => deactivatePerfume(item.id),
                     },
@@ -357,21 +318,21 @@ function InactivePerfumesSection({ perfumes, onRestore }) {
   return (
     <View style={styles.inactiveSection}>
       <View style={styles.inactiveHeader}>
-        <Feather name="eye-off" size={15} color={colors.textSubtle} />
-        <Text style={styles.inactiveTitle}>Perfumes Ocultados</Text>
+        <Feather name="eye-off" size={16} color={colors.rose} />
+        <Text style={styles.inactiveTitle}>Fragancias Archivadas</Text>
       </View>
       <Text style={styles.inactiveSubtitle}>
-        Sección de archivo para reactivar perfumes que no deseas mostrar temporalmente.
+        Perfumes temporalmente ocultos de la venta y catálogo público.
       </Text>
       {perfumes.map((perfume) => (
         <View key={perfume.id} style={styles.inactiveCard}>
           <View style={styles.inactiveInfo}>
             <Text style={styles.inactiveName}>{perfume.nombre}</Text>
-            <Text style={styles.inactiveBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
+            <Text style={styles.inactiveBrand}>{perfume.marca?.toUpperCase() || 'ALTA GAMA'}</Text>
           </View>
-          <AnimatedPressable onPress={() => onRestore(perfume)} style={styles.restoreButton}>
-            <Feather name="rotate-ccw" size={13} color={colors.successText} style={{ marginRight: 4 }} />
-            <Text style={styles.restoreButtonText}>Reactivar</Text>
+          <AnimatedPressable onPress={() => onRestore(perfume)} style={styles.restoreButton} scaleTo={0.94}>
+            <Feather name="rotate-ccw" size={13} color={colors.ink} style={{ marginRight: 4 }} />
+            <Text style={styles.restoreButtonText}>Restaurar</Text>
           </AnimatedPressable>
         </View>
       ))}
@@ -389,7 +350,7 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
       <View style={styles.cardTop}>
         {perfume.imagen ? (
           <View style={styles.imageContainer}>
-            <Image source={{ uri: perfume.imagen }} style={styles.cardImage} />
+            <Image source={{ uri: perfume.imagen }} style={styles.cardImage} resizeMode="contain" />
           </View>
         ) : (
           <View style={styles.bottleMark}>
@@ -397,40 +358,47 @@ function PerfumeCard({ perfume, onPress, onEdit, onDelete }) {
           </View>
         )}
         <View style={styles.cardInfo}>
+          <Text style={styles.cardBrand}>{perfume.marca?.toUpperCase() || 'MARCA EXCLUSIVA'}</Text>
           <Text style={styles.cardTitle}>{perfume.nombre}</Text>
-          <Text style={styles.cardBrand}>{perfume.marca || 'Marca Exclusiva'}</Text>
-          {!!perfume.categoria_perfume && (
-            <Text style={styles.cardCategory}>{perfume.categoria_perfume}</Text>
-          )}
-          {!!perfume.genero_perfume && (
-            <Text style={styles.cardCategory}>{perfume.genero_perfume}</Text>
-          )}
+
+          <View style={styles.pillRow}>
+            {!!perfume.categoria_perfume && (
+              <View style={styles.metaChip}>
+                <Text style={styles.metaChipText}>{perfume.categoria_perfume?.toUpperCase()}</Text>
+              </View>
+            )}
+            {!!perfume.genero_perfume && (
+              <View style={styles.metaChipWarm}>
+                <Text style={styles.metaChipTextWarm}>{perfume.genero_perfume?.toUpperCase()}</Text>
+              </View>
+            )}
+          </View>
         </View>
-        <Feather name="chevron-right" size={18} color={colors.textSubtle} />
+        <Feather name="chevron-right" size={20} color={colors.gold} />
       </View>
 
       {!!perfume.descripcion_olor && (
-        <Text style={styles.description}>{perfume.descripcion_olor}</Text>
+        <Text style={styles.description} numberOfLines={2}>"{perfume.descripcion_olor}"</Text>
       )}
 
       <View style={styles.cardMetaRow}>
         <View style={styles.metaBadge}>
-          <Feather name="droplet" size={12} color={colors.gold} style={{ marginRight: 4 }} />
+          <Feather name="droplet" size={12} color={colors.gold} style={{ marginRight: 5 }} />
           <Text style={styles.metaText}>{perfume.ml_botella_completa || 0} ml</Text>
         </View>
         <View style={styles.metaBadge}>
-          <Feather name="shopping-bag" size={12} color={colors.gold} style={{ marginRight: 4 }} />
-          <Text style={styles.metaText}>Liverpool: ${perfume.precio_liverpool || 0}</Text>
+          <Feather name="shopping-bag" size={12} color={colors.gold} style={{ marginRight: 5 }} />
+          <Text style={styles.metaText}>Ref: ${perfume.precio_liverpool || 0}</Text>
         </View>
       </View>
-      
+
       <View style={styles.adminActions}>
         <Pressable onPress={onEdit} style={styles.actionButton}>
           <Feather name="edit-2" size={13} color={colors.ink} style={{ marginRight: 5 }} />
-          <Text style={styles.actionButtonText}>Editar</Text>
+          <Text style={styles.actionButtonText}>Editar Ficha</Text>
         </Pressable>
         <Pressable onPress={onDelete} style={styles.actionButtonDark}>
-          <Feather name="eye-off" size={13} color={colors.textMuted} style={{ marginRight: 5 }} />
+          <Feather name="eye-off" size={13} color={colors.rose} style={{ marginRight: 5 }} />
           <Text style={styles.actionButtonTextLight}>Ocultar</Text>
         </Pressable>
       </View>
@@ -452,196 +420,175 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: 4,
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderRadius: radius.sm,
-    paddingHorizontal: 14,
-    minHeight: 38,
-    ...shadow.glow,
-  },
-  addIcon: {
-    marginRight: 4,
+    backgroundColor: colors.petroleum,
+    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    minHeight: 40,
+    ...shadow.card,
   },
   addButtonText: {
-    color: colors.ink,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0.2,
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '800',
   },
   loader: {
-    marginTop: 36,
+    marginTop: 40,
   },
-  messageBox: {
+  errorBanner: {
     backgroundColor: colors.dangerSurface,
     borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  errorText: {
+  errorBannerText: {
     color: colors.danger,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 110,
   },
-  filterToggle: {
-    minHeight: 42,
-    borderRadius: radius.sm,
+  filterBarButton: {
+    minHeight: 46,
+    borderRadius: radius.lg,
     backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.sm,
-    marginTop: -spacing.sm,
+    borderColor: colors.lineStrong,
+    paddingHorizontal: spacing.md,
+    marginTop: -4,
     marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    ...shadow.card,
   },
-  filterToggleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  filterToggleText: {
+  filterBarButtonText: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   filterCountBadge: {
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.amber,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 5,
   },
-  filterCountText: {
-    color: colors.ink,
+  filterCountBadgeText: {
+    color: colors.white,
     fontSize: 10,
     fontWeight: '900',
   },
-  filtersPanel: {
+  filtersDrawer: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.lineStrong,
-    padding: spacing.md,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.card,
   },
-  filterLabel: {
-    color: colors.gold,
+  filterSectionTitle: {
+    color: colors.amber,
     fontSize: 11,
     fontWeight: '900',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: spacing.xs,
+    marginBottom: 8,
   },
-  filterChipRow: {
-    gap: 6,
-    paddingBottom: spacing.sm,
+  filterChipsScroll: {
+    gap: 8,
+    paddingBottom: spacing.md,
   },
-  filterChip: {
-    minHeight: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+  luxuryChip: {
+    minHeight: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
   },
-  filterChipActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+  luxuryChipActive: {
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
   },
-  filterChipText: {
-    color: colors.textSubtle,
+  luxuryChipText: {
+    color: colors.textMuted,
     fontSize: 12,
+    fontWeight: '800',
+  },
+  luxuryChipTextActive: {
+    color: colors.white,
     fontWeight: '900',
   },
-  filterChipTextActive: {
-    color: colors.ink,
-  },
-  clearFiltersButton: {
+  resetFiltersBtn: {
     alignSelf: 'flex-start',
-    minHeight: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    marginTop: spacing.xs,
-  },
-  clearFiltersText: {
-    color: colors.ink,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  suggestionsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
-  },
-  suggestionPill: {
-    minHeight: 42,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.field,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
+    marginTop: 4,
   },
-  suggestionText: {
+  resetFiltersBtnText: {
     color: colors.text,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
   },
-  suggestionDetail: {
-    color: colors.textSubtle,
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  emptyContainer: {
+  emptyCard: {
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    padding: spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 36,
+    marginTop: spacing.md,
+    ...shadow.card,
   },
-  emptyText: {
-    color: colors.textSubtle,
-    fontSize: 14,
+  emptyCardTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  emptyCardSub: {
+    color: colors.textMuted,
+    fontSize: 13,
     textAlign: 'center',
+    lineHeight: 19,
   },
   card: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
+    borderColor: colors.lineSoft,
+    padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.card,
   },
@@ -653,55 +600,84 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderWidth: 1,
     borderColor: colors.lineStrong,
-    borderRadius: radius.sm,
-    padding: 2,
-  },
-  cardImage: {
-    width: 52,
-    height: 62,
-    borderRadius: radius.sm - 2,
-    backgroundColor: colors.background,
-  },
-  bottleMark: {
-    width: 52,
-    height: 62,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    padding: 3,
+    backgroundColor: colors.field,
+    width: 68,
+    height: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.glow,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.sm,
+  },
+  bottleMark: {
+    width: 68,
+    height: 80,
+    borderRadius: radius.md,
+    backgroundColor: colors.petroleum,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottleText: {
-    color: colors.ink,
-    fontSize: 22,
+    color: colors.gold,
+    fontSize: 26,
     fontWeight: '900',
   },
   cardInfo: {
     flex: 1,
   },
-  cardTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '800',
-  },
   cardBrand: {
-    color: colors.gold,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  cardCategory: {
-    color: colors.textSubtle,
+    color: colors.amber,
     fontSize: 11,
     fontWeight: '900',
-    marginTop: 3,
-    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+  },
+  metaChip: {
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 106, 53, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  metaChipText: {
+    color: colors.amber,
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  metaChipWarm: {
+    backgroundColor: 'rgba(22, 50, 58, 0.08)',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(22, 50, 58, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  metaChipTextWarm: {
+    color: colors.petroleum,
+    fontSize: 9,
+    fontWeight: '900',
   },
   description: {
-    color: colors.textSubtle,
+    color: colors.textMuted,
     fontSize: 13,
-    lineHeight: 18,
-    marginTop: spacing.sm,
+    lineHeight: 19,
+    marginTop: spacing.md,
     fontStyle: 'italic',
   },
   cardMetaRow: {
@@ -712,17 +688,17 @@ const styles = StyleSheet.create({
   metaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.line,
+    backgroundColor: colors.field,
+    borderColor: colors.lineStrong,
     borderWidth: 1,
     borderRadius: radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   metaText: {
-    color: colors.textMuted,
+    color: colors.text,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   adminActions: {
     flexDirection: 'row',
@@ -730,45 +706,47 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.lineSoft,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
   },
   actionButton: {
     flex: 1,
-    minHeight: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.field,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonDark: {
     flex: 1,
-    minHeight: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerSurface,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.dangerLine,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonText: {
-    color: colors.ink,
+    color: colors.text,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   actionButtonTextLight: {
-    color: colors.textMuted,
+    color: colors.danger,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   inactiveSection: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
-    marginTop: spacing.md,
+    borderColor: colors.lineSoft,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
     ...shadow.card,
   },
   inactiveHeader: {
@@ -780,21 +758,21 @@ const styles = StyleSheet.create({
   inactiveTitle: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   inactiveSubtitle: {
-    color: colors.textSubtle,
+    color: colors.textMuted,
     fontSize: 12,
     lineHeight: 18,
     marginBottom: spacing.md,
   },
   inactiveCard: {
-    minHeight: 52,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    minHeight: 56,
+    borderRadius: radius.lg,
+    backgroundColor: colors.field,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    borderColor: colors.lineStrong,
+    padding: spacing.md,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -805,26 +783,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inactiveName: {
-    color: colors.textMuted,
-    fontSize: 14,
+    color: colors.text,
+    fontSize: 15,
     fontWeight: '800',
   },
   inactiveBrand: {
-    color: colors.textSubtle,
-    fontSize: 12,
+    color: colors.amber,
+    fontSize: 11,
+    fontWeight: '700',
     marginTop: 2,
   },
   restoreButton: {
-    minHeight: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.success,
+    minHeight: 34,
+    borderRadius: radius.md,
+    backgroundColor: colors.petroleum,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   restoreButtonText: {
-    color: colors.successText,
+    color: colors.white,
     fontSize: 11,
     fontWeight: '900',
   },

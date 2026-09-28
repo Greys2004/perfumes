@@ -2,16 +2,38 @@ import { Feather } from '@expo/vector-icons';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import AnimatedPressable from './AnimatedPressable';
-import { colors, radius, spacing } from '../theme';
+import { colors, radius, spacing, shadow } from '../theme';
 
-const menuItems = [
-  { label: 'Inicio', routeName: 'Home', icon: 'home' },
-  { label: 'Catalogo', routeName: 'PerfumesList', icon: 'tag' },
-  { label: 'Clientes', routeName: 'ClientsList', icon: 'users' },
-  { label: 'Nueva Venta', routeName: 'SaleForm', icon: 'shopping-cart' },
-  { label: 'Pagos', routeName: 'Payments', icon: 'credit-card' },
-  { label: 'Calendario Pagos', routeName: 'ReceivablesCalendar', icon: 'calendar' },
-  { label: 'Dashboard', routeName: 'Dashboard', icon: 'pie-chart' },
+const adminTools = [
+  {
+    label: 'Gestión de Pagos & Abonos',
+    sublabel: 'Registro de cobros y saldos',
+    routeName: 'Payments',
+    icon: 'credit-card',
+    tone: 'amber',
+  },
+  {
+    label: 'Calendario de Cobros',
+    sublabel: 'Agenda de fechas prometidas',
+    routeName: 'ReceivablesCalendar',
+    icon: 'calendar',
+    tone: 'gold',
+  },
+];
+
+const quickActions = [
+  {
+    label: 'Nueva Fragancia',
+    sublabel: 'Añadir fórmula al catálogo',
+    routeName: 'PerfumeForm',
+    icon: 'droplet',
+  },
+  {
+    label: 'Nuevo Cliente Privé',
+    sublabel: 'Registrar ficha VIP',
+    routeName: 'ClientForm',
+    icon: 'user-plus',
+  },
 ];
 
 export default function AppMenu({ visible, onClose, onNavigate, onLogout }) {
@@ -20,43 +42,87 @@ export default function AppMenu({ visible, onClose, onNavigate, onLogout }) {
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.drawer}>
+          {/* Brand Card */}
           <View style={styles.brandBlock}>
             <View style={styles.brandHeader}>
               <Image source={require('../../assets/icon.png')} style={styles.logo} />
-              <Text style={styles.kicker}>Admin Panel</Text>
+              <View style={styles.brandBadge}>
+                <Text style={styles.kicker}>PANEL DE CONTROL</Text>
+              </View>
             </View>
             <Text style={styles.title}>AromaOrigen</Text>
-            <Text style={styles.subtitle}>Gestion de Perfumes & Clientes</Text>
+            <Text style={styles.subtitle}>Gestión de Alta Perfumería & Finanzas</Text>
           </View>
 
+          {/* Tools not in Bottom Dock */}
+          <Text style={styles.sectionHeader}>COBRANZA & CRÉDITO</Text>
           <View style={styles.group}>
-            {menuItems.map((item) => (
+            {adminTools.map((item) => (
               <AnimatedPressable
                 key={item.routeName}
-                onPress={() => onNavigate(item.routeName)}
+                onPress={() => {
+                  onClose();
+                  onNavigate(item.routeName);
+                }}
                 style={styles.menuItem}
               >
                 <View style={styles.iconCircle}>
-                  <Feather name={item.icon} size={16} color={colors.ink} />
+                  <Feather name={item.icon} size={16} color={colors.gold} />
                 </View>
-                <Text style={styles.menuText}>{item.label}</Text>
-                <Feather name="chevron-right" size={14} color={colors.textSubtle} style={styles.arrow} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.menuText}>{item.label}</Text>
+                  <Text style={styles.menuSub}>{item.sublabel}</Text>
+                </View>
+                <Feather name="chevron-right" size={14} color={colors.amber} style={styles.arrow} />
               </AnimatedPressable>
             ))}
           </View>
 
+          {/* Quick Creation Shortcuts */}
+          <Text style={styles.sectionHeader}>ACCESOS RÁPIDOS</Text>
+          <View style={styles.group}>
+            {quickActions.map((item) => (
+              <AnimatedPressable
+                key={item.routeName}
+                onPress={() => {
+                  onClose();
+                  onNavigate(item.routeName);
+                }}
+                style={styles.menuItem}
+              >
+                <View style={styles.iconCircle}>
+                  <Feather name={item.icon} size={16} color={colors.goldLight} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.menuText}>{item.label}</Text>
+                  <Text style={styles.menuSub}>{item.sublabel}</Text>
+                </View>
+                <Feather name="plus" size={14} color={colors.gold} style={styles.arrow} />
+              </AnimatedPressable>
+            ))}
+          </View>
+
+          {/* Footer & Session */}
           <View style={styles.footerNote}>
-            <AnimatedPressable onPress={onLogout} style={styles.logoutButton}>
+            <AnimatedPressable
+              onPress={() => {
+                onClose();
+                onLogout();
+              }}
+              style={styles.logoutButton}
+            >
               <View style={styles.logoutIcon}>
                 <Feather name="log-out" size={16} color={colors.danger} />
               </View>
-              <Text style={styles.logoutText}>Cerrar sesion</Text>
+              <Text style={styles.logoutText}>Cerrar Sesión</Text>
             </AnimatedPressable>
 
-            <Text style={styles.sectionLabel}>Nota de navegacion</Text>
-            <Text style={styles.footerText}>
-              "Inicio" es la vista publica del catalogo de perfumes. Las demas opciones son administrativas internas.
-            </Text>
+            <View style={styles.dockNoteBox}>
+              <Feather name="compass" size={12} color={colors.gold} style={{ marginRight: 6 }} />
+              <Text style={styles.dockNoteText}>
+                Boutique, Catálogo, Vender, Clientes y Finanzas están siempre disponibles en tu barra inferior.
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -68,133 +134,160 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: 'rgba(5, 5, 8, 0.75)',
+    backgroundColor: 'rgba(22, 50, 58, 0.45)',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   drawer: {
-    width: 290,
+    width: 310,
     backgroundColor: colors.background,
     borderRightWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(166, 136, 100, 0.3)',
     paddingTop: 54,
     paddingHorizontal: spacing.md,
+    ...shadow.card,
   },
   brandBlock: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.lineStrong,
+    borderColor: 'rgba(166, 136, 100, 0.28)',
     padding: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
   brandHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
   logo: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     borderRadius: radius.sm,
     backgroundColor: colors.background,
   },
+  brandBadge: {
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 106, 53, 0.25)',
+  },
   kicker: {
-    color: colors.gold,
-    fontSize: 11,
+    color: colors.amber,
+    fontSize: 9,
     fontWeight: '900',
-    textTransform: 'uppercase',
     letterSpacing: 1,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     marginBottom: 2,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    color: colors.textSubtle,
-    fontSize: 12,
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '700',
   },
+  sectionHeader: {
+    color: colors.amber,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+    marginTop: spacing.xs,
+    paddingHorizontal: 4,
+  },
   group: {
-    gap: 10,
-    marginBottom: spacing.xl,
+    gap: 8,
+    marginBottom: spacing.md,
   },
   menuItem: {
-    minHeight: 50,
-    borderRadius: radius.sm,
+    minHeight: 52,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceCard,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderWidth: 1.2,
+    borderColor: 'rgba(166, 136, 100, 0.22)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    ...shadow.card,
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.petroleum,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
   menuText: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    flex: 1,
+  },
+  menuSub: {
+    color: colors.textSubtle,
+    fontSize: 10,
+    marginTop: 1,
   },
   arrow: {
-    opacity: 0.6,
+    opacity: 0.8,
+    marginLeft: 6,
   },
   footerNote: {
     borderTopWidth: 1,
-    borderTopColor: colors.line,
+    borderTopColor: 'rgba(166, 136, 100, 0.2)',
     paddingTop: spacing.md,
     marginTop: 'auto',
     marginBottom: 24,
   },
   logoutButton: {
-    minHeight: 48,
-    borderRadius: radius.sm,
+    minHeight: 46,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.dangerLine,
     backgroundColor: colors.dangerSurface,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   logoutIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.background,
+    width: 30,
+    height: 30,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
   logoutText: {
     color: colors.danger,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
     flex: 1,
   },
-  sectionLabel: {
-    color: colors.gold,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
+  dockNoteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(166, 136, 100, 0.08)',
+    borderRadius: radius.sm,
+    padding: 8,
   },
-  footerText: {
+  dockNoteText: {
     color: colors.textSubtle,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 10,
+    lineHeight: 14,
+    flex: 1,
   },
 });

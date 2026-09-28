@@ -532,11 +532,16 @@ export default function ReceivablesCalendarScreen() {
       <View style={styles.calendarPanel}>
         <View style={styles.monthHeader}>
           <Pressable onPress={() => setSelectedDate(addMonths(selectedDate, -1))} style={styles.iconButton}>
-            <Feather name="chevron-left" size={16} color={colors.text} />
+            <Feather name="chevron-left" size={16} color={colors.gold} />
           </Pressable>
-          <Text style={styles.monthTitle}>{monthTitle}</Text>
+          <View style={styles.monthTitleWrapper}>
+            <Text style={styles.monthTitle}>{monthTitle}</Text>
+          </View>
+          <Pressable onPress={() => setSelectedDate(getLocalDateString())} style={styles.todayQuickBtn}>
+            <Text style={styles.todayQuickText}>Hoy</Text>
+          </Pressable>
           <Pressable onPress={() => setSelectedDate(addMonths(selectedDate, 1))} style={styles.iconButton}>
-            <Feather name="chevron-right" size={16} color={colors.text} />
+            <Feather name="chevron-right" size={16} color={colors.gold} />
           </Pressable>
         </View>
 
@@ -574,10 +579,10 @@ export default function ReceivablesCalendarScreen() {
                   <View
                     style={[
                       styles.dueDot,
-                      { backgroundColor: isSelected ? colors.ink : dotColor },
+                      { backgroundColor: isSelected ? colors.white : dotColor },
                     ]}
                   >
-                    <Text style={[styles.dueDotText, isSelected && { color: dotColor }]}>
+                    <Text style={[styles.dueDotText, { color: isSelected ? dotColor : colors.white }]}>
                       {dotCount}
                     </Text>
                   </View>
@@ -956,34 +961,33 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 80,
-  },
-  kicker: {
-    color: colors.gold,
-    fontSize: 12,
+    paddingBottom: 110,
+  },  kicker: {
+    color: colors.amber,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: 4,
   },
   title: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
   subtitle: {
     color: colors.textSubtle,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
     marginBottom: spacing.lg,
   },
   calendarPanel: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.lineStrong,
+    borderColor: 'rgba(166, 136, 100, 0.28)',
     padding: spacing.md,
     marginBottom: spacing.md,
     ...shadow.card,
@@ -993,20 +997,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+    gap: 8,
+  },
+  monthTitleWrapper: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  todayQuickBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 106, 53, 0.3)',
+  },
+  todayQuickText: {
+    color: colors.amber,
+    fontSize: 12,
+    fontWeight: '800',
   },
   iconButton: {
     width: 38,
     height: 38,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.md,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthTitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
   },
   dayLabelRow: {
@@ -1015,7 +1037,7 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     flex: 1,
-    color: colors.textSubtle,
+    color: colors.amber,
     fontSize: 11,
     fontWeight: '900',
     textAlign: 'center',
@@ -1027,22 +1049,21 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: `${100 / 7}%`,
-    aspectRatio: 0.9,
+    aspectRatio: 0.92,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surfaceRaised,
+    borderColor: 'rgba(166, 136, 100, 0.22)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
   },
   dayCellMuted: {
     opacity: 0.35,
   },
   dayCellActive: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.petroleum,
     borderColor: colors.gold,
-    ...shadow.glow,
   },
   dayNumber: {
     color: colors.text,
@@ -1050,7 +1071,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   dayNumberActive: {
-    color: colors.ink,
+    color: '#FFFFFF',
   },
   dueDot: {
     minWidth: 18,
@@ -1061,15 +1082,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dueDotText: {
-    color: colors.ink,
+    color: colors.white,
     fontSize: 10,
     fontWeight: '900',
   },
   panel: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     padding: spacing.md,
     ...shadow.card,
   },
@@ -1089,10 +1110,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   saleCard: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
+    backgroundColor: colors.field,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     padding: spacing.sm,
     marginBottom: 8,
   },
@@ -1157,9 +1178,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.sm - 2,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     paddingHorizontal: 8,
     paddingVertical: 7,
     marginTop: spacing.sm,
@@ -1177,25 +1198,25 @@ const styles = StyleSheet.create({
   resultButton: {
     flex: 1,
     minHeight: 38,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    backgroundColor: colors.petroleum,
     borderWidth: 1,
+    borderColor: colors.petroleum,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    ...shadow.glow,
   },
   resultButtonText: {
-    color: colors.ink,
+    color: colors.white,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   outcomeBox: {
     marginTop: spacing.sm,
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     padding: spacing.sm,
@@ -1208,17 +1229,17 @@ const styles = StyleSheet.create({
   outcomeSegment: {
     flex: 1,
     minHeight: 36,
-    borderRadius: radius.sm - 2,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.field,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
   outcomeSegmentActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
   },
   outcomeSegmentText: {
     color: colors.textSubtle,
@@ -1226,12 +1247,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   outcomeSegmentTextActive: {
-    color: colors.ink,
+    color: colors.white,
   },
   editButton: {
     flex: 1,
     minHeight: 34,
-    borderRadius: radius.sm - 2,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceCard,
     borderWidth: 1,
     borderColor: colors.lineStrong,
@@ -1241,7 +1262,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   editButtonText: {
-    color: colors.gold,
+    color: colors.petroleum,
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -1254,9 +1275,9 @@ const styles = StyleSheet.create({
   },
   promiseEditor: {
     backgroundColor: colors.surfaceCard,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineStrong,
     padding: spacing.sm,
     marginBottom: spacing.sm,
   },
@@ -1267,7 +1288,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   promiseEditorTitle: {
-    color: colors.gold,
+    color: colors.amber,
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -1275,8 +1296,8 @@ const styles = StyleSheet.create({
   removeButton: {
     width: 28,
     height: 28,
-    borderRadius: radius.sm - 4,
-    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    backgroundColor: colors.field,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1285,7 +1306,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     minHeight: 40,
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     backgroundColor: colors.surfaceCard,
@@ -1295,14 +1316,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   secondaryButtonText: {
-    color: colors.gold,
+    color: colors.petroleum,
     fontSize: 12,
     fontWeight: '900',
   },
   sheetOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(5, 5, 8, 0.68)',
+    backgroundColor: 'rgba(22, 50, 58, 0.45)',
   },
   sheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1310,8 +1331,8 @@ const styles = StyleSheet.create({
   sheet: {
     maxHeight: '88%',
     backgroundColor: colors.surfaceCard,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     padding: spacing.md,
@@ -1325,7 +1346,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   sheetKicker: {
-    color: colors.gold,
+    color: colors.amber,
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -1340,11 +1361,12 @@ const styles = StyleSheet.create({
   sheetCloseButton: {
     width: 34,
     height: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    borderRadius: radius.pill,
+    backgroundColor: colors.field,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.glow,
   },
   sheetMeta: {
     color: colors.textSubtle,
@@ -1357,22 +1379,22 @@ const styles = StyleSheet.create({
     maxHeight: 470,
   },
   rescheduleSummary: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
+    backgroundColor: colors.field,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   rescheduleLabel: {
-    color: colors.textSubtle,
+    color: colors.amber,
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
     marginBottom: 4,
   },
   rescheduleAmount: {
-    color: colors.gold,
+    color: colors.text,
     fontSize: 24,
     fontWeight: '900',
   },
@@ -1386,7 +1408,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerSurface,
     borderColor: colors.dangerLine,
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },

@@ -83,6 +83,7 @@ export default function PerfumeDetailScreen({ route }) {
     ml_restantes: '',
     notas_ajuste_stock: '',
   });
+  const [showPurchaseDrawer, setShowPurchaseDrawer] = useState(false);
   const [savingPrice, setSavingPrice] = useState(false);
   const [savingPurchase, setSavingPurchase] = useState(false);
   const [savingStock, setSavingStock] = useState(false);
@@ -188,6 +189,7 @@ export default function PerfumeDetailScreen({ route }) {
       setSavingPurchase(true);
       await createPurchase(perfume.id, purchaseForm);
       setPurchaseForm(getInitialPurchaseForm(perfume));
+      setShowPurchaseDrawer(false);
     } catch (firebaseError) {
       Alert.alert('No se pudo guardar la compra', firebaseError.message);
     } finally {
@@ -234,198 +236,383 @@ export default function PerfumeDetailScreen({ route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}
     >
-      <View style={styles.hero}>
-        {perfume.imagen ? (
-          <View style={styles.heroImageFrame}>
-            <Image source={{ uri: perfume.imagen }} style={styles.heroImage} />
-          </View>
-        ) : (
-          <View style={styles.bottleMark}>
-            <Text style={styles.bottleText}>{perfume.nombre?.charAt(0) || 'P'}</Text>
-          </View>
-        )}
-        <View style={styles.heroInfo}>
-          <Text style={styles.kicker}>{perfume.marca || 'Marca Exclusiva'}</Text>
-          <Text style={styles.title}>{perfume.nombre}</Text>
-          {!!perfume.categoria_perfume && (
-            <Text style={styles.categoryText}>{perfume.categoria_perfume}</Text>
+      {/* Haute Parfumerie Hero Banner */}
+      <View style={styles.heroCard}>
+        <View style={styles.heroImageContainer}>
+          {perfume.imagen ? (
+            <Image source={{ uri: perfume.imagen }} style={styles.heroImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.crestPlaceholder}>
+              <Feather name="droplet" size={38} color={colors.gold} />
+              <Text style={styles.crestPlaceholderLetter}>
+                {perfume.nombre?.charAt(0) || 'A'}
+              </Text>
+            </View>
           )}
-          {!!perfume.genero_perfume && (
-            <Text style={styles.categoryText}>{perfume.genero_perfume}</Text>
-          )}
+          <View style={styles.imageOverlayGradient} />
+        </View>
+
+        <View style={styles.heroDetails}>
+          <View style={styles.brandRow}>
+            <Text style={styles.brandBadge}>{perfume.marca?.toUpperCase() || 'MAISON PRIVÉE'}</Text>
+            {!!perfume.categoria_perfume && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>
+                  {perfume.categoria_perfume.toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.perfumeTitle}>{perfume.nombre}</Text>
+
           {!!perfume.descripcion_olor && (
-            <Text style={styles.description}>{perfume.descripcion_olor}</Text>
+            <Text style={styles.fragranceDescription}>{perfume.descripcion_olor}</Text>
           )}
+
+          <View style={styles.heroSpecsRow}>
+            {!!perfume.genero_perfume && (
+              <View style={styles.specItem}>
+                <Feather name="user" size={12} color={colors.gold} />
+                <Text style={styles.specText}>{perfume.genero_perfume}</Text>
+              </View>
+            )}
+            {!!perfume.duracion && (
+              <View style={styles.specItem}>
+                <Feather name="clock" size={12} color={colors.gold} />
+                <Text style={styles.specText}>{perfume.duracion}</Text>
+              </View>
+            )}
+            {!!perfume.ml_botella_completa && (
+              <View style={styles.specItem}>
+                <Feather name="disc" size={12} color={colors.gold} />
+                <Text style={styles.specText}>{perfume.ml_botella_completa} ml Frasco</Text>
+              </View>
+            )}
+            {!!perfume.precio_liverpool && (
+              <View style={styles.specItem}>
+                <Feather name="tag" size={12} color={colors.copper} />
+                <Text style={[styles.specText, { color: colors.goldLight }]}>
+                  Ref: ${perfume.precio_liverpool}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
       {!!error && (
-        <View style={styles.messageBox}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View style={styles.errorAlert}>
+          <Feather name="alert-circle" size={16} color={colors.rose} />
+          <Text style={styles.errorAlertText}>{error}</Text>
         </View>
       )}
 
-      <View style={styles.stockPanel}>
-        <View>
-          <Text style={styles.stockLabel}>Stock Total Disponible</Text>
-          <Text style={styles.stockValue}>{totalStock} ml</Text>
-        </View>
-        <Feather name="droplet" size={32} color={colors.gold} style={styles.stockIcon} />
-      </View>
+      {/* Olfactory Pyramid (Pirámide Olfativa) */}
+      {(!!perfume.notas_salida || !!perfume.notas_corazon || !!perfume.notas_fondo) && (
+        <View style={styles.pyramidPanel}>
+          <View style={styles.sectionHeader}>
+            <Feather name="layers" size={16} color={colors.gold} />
+            <Text style={styles.sectionTitle}>Pirámide Olfativa</Text>
+          </View>
 
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Feather name="tag" size={16} color={colors.gold} />
-          <Text style={styles.panelTitle}>Precios por Presentación</Text>
-        </View>
-        {prices.length === 0 ? (
-          <Text style={styles.emptyText}>Aún no hay precios guardados para este perfume.</Text>
-        ) : (
-          prices.map((price) => (
-            <View key={price.id} style={styles.rowItem}>
-              <View style={styles.rowTextGroup}>
-                <Text style={styles.rowTitle}>{typeLabels[price.tipo] || price.tipo}</Text>
-                <Text style={styles.rowSubtext}>{price.ml} ml</Text>
+          {!!perfume.notas_salida && (
+            <View style={styles.noteLevel}>
+              <View style={styles.noteHeader}>
+                <View style={[styles.noteBullet, { backgroundColor: colors.gold }]} />
+                <Text style={styles.noteLevelTitle}>NOTAS DE SALIDA (Apertura)</Text>
               </View>
-              <View style={styles.priceActions}>
-                <Text style={styles.rowValue}>${price.precio_publico}</Text>
-                <View style={styles.actionButtonsInline}>
-                  <Pressable onPress={() => handleEditPrice(price)} style={styles.smallButton}>
-                    <Feather name="edit-2" size={11} color={colors.ink} />
-                  </Pressable>
-                  <Pressable onPress={() => handleDeletePrice(price)} style={styles.smallButtonDark}>
-                    <Feather name="eye-off" size={11} color={colors.textMuted} />
-                  </Pressable>
-                </View>
-              </View>
+              <Text style={styles.noteText}>{perfume.notas_salida}</Text>
             </View>
-          ))
-        )}
+          )}
 
-        <Text style={styles.formTitle}>
-          {priceForm.id ? 'Editar presentación' : 'Agregar presentación'}
-        </Text>
-        <View style={styles.segmentRow}>
-          {presentationTypes.map((type) => (
-            <Pressable
-              key={type.value}
-              onPress={() => updatePriceField('tipo', type.value)}
+          {!!perfume.notas_corazon && (
+            <View style={styles.noteLevel}>
+              <View style={styles.noteHeader}>
+                <View style={[styles.noteBullet, { backgroundColor: colors.amber }]} />
+                <Text style={styles.noteLevelTitle}>NOTAS DE CORAZÓN (Cuerpo)</Text>
+              </View>
+              <Text style={styles.noteText}>{perfume.notas_corazon}</Text>
+            </View>
+          )}
+
+          {!!perfume.notas_fondo && (
+            <View style={styles.noteLevel}>
+              <View style={styles.noteHeader}>
+                <View style={[styles.noteBullet, { backgroundColor: colors.copper }]} />
+                <Text style={styles.noteLevelTitle}>NOTAS DE FONDO (Base duradera)</Text>
+              </View>
+              <Text style={styles.noteText}>{perfume.notas_fondo}</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Stock Total Disponible Gauge */}
+      <View style={styles.stockGaugeCard}>
+        <View style={styles.stockInfoBlock}>
+          <Text style={styles.stockLabel}>RESERVA DISPONIBLE EN VAULT</Text>
+          <View style={styles.stockNumberRow}>
+            <Text style={styles.stockValue}>{totalStock}</Text>
+            <Text style={styles.stockUnit}>ml</Text>
+            <View
               style={[
-                styles.segment,
-                priceForm.tipo === type.value && styles.segmentActive,
+                styles.stockBadge,
+                {
+                  backgroundColor:
+                    totalStock > 30
+                      ? 'rgba(95, 175, 139, 0.2)'
+                      : totalStock > 0
+                        ? 'rgba(166, 106, 53, 0.25)'
+                        : 'rgba(201, 151, 152, 0.25)',
+                },
               ]}
             >
               <Text
                 style={[
-                  styles.segmentText,
-                  priceForm.tipo === type.value && styles.segmentTextActive,
+                  styles.stockBadgeText,
+                  {
+                    color:
+                      totalStock > 30
+                        ? colors.success
+                        : totalStock > 0
+                          ? colors.amber
+                          : colors.danger,
+                  },
                 ]}
               >
-                {type.label}
+                {totalStock > 30
+                  ? 'DISPONIBILIDAD ÓPTIMA'
+                  : totalStock > 0
+                    ? 'ÚLTIMOS DECANTES'
+                    : 'AGOTADO'}
               </Text>
-            </Pressable>
-          ))}
+            </View>
+          </View>
+          <Text style={styles.stockSub}>
+            Basado en {availablePurchases.length} frasco(s) activos registrados
+          </Text>
         </View>
-        <FormInput
-          label="Precio Público"
-          value={priceForm.precio_publico}
-          onChangeText={(value) => updatePriceField('precio_publico', value)}
-          placeholder="Ej. 180"
-          keyboardType="numeric"
-        />
-        <PrimaryButton
-          title={savingPrice ? 'Guardando...' : priceForm.id ? 'Actualizar Precio' : 'Guardar Precio'}
-          onPress={handleSavePrice}
-          disabled={savingPrice}
-        />
-        {priceForm.id && (
-          <View style={styles.cancelEdit}>
+        <View style={styles.stockIconCircle}>
+          <Feather name="droplet" size={26} color={colors.gold} />
+        </View>
+      </View>
+
+      {/* Presentations & Pricing Section */}
+      <View style={styles.luxuryPanel}>
+        <View style={styles.sectionHeader}>
+          <Feather name="tag" size={16} color={colors.gold} />
+          <Text style={styles.sectionTitle}>Precios por Presentación</Text>
+        </View>
+
+        {prices.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              Aún no hay presentaciones configuradas para esta fragancia.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.pricesGrid}>
+            {prices.map((price) => (
+              <View key={price.id} style={styles.priceCard}>
+                <View style={styles.priceCardTop}>
+                  <View style={styles.presentationIcon}>
+                    <Feather name="disc" size={14} color={colors.gold} />
+                  </View>
+                  <View style={styles.presentationTextGroup}>
+                    <Text style={styles.presentationTitle}>
+                      {typeLabels[price.tipo] || price.tipo}
+                    </Text>
+                    <Text style={styles.presentationSub}>{price.ml} ml de extracto</Text>
+                  </View>
+                </View>
+                <View style={styles.priceCardBottom}>
+                  <Text style={styles.presentationPrice}>${price.precio_publico}</Text>
+                  <View style={styles.priceButtonRow}>
+                    <AnimatedPressable
+                      onPress={() => handleEditPrice(price)}
+                      style={styles.priceMiniBtn}
+                      scaleTo={0.9}
+                    >
+                      <Feather name="edit-2" size={12} color={colors.ink} />
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      onPress={() => handleDeletePrice(price)}
+                      style={styles.priceMiniBtnDark}
+                      scaleTo={0.9}
+                    >
+                      <Feather name="eye-off" size={12} color={colors.textSubtle} />
+                    </AnimatedPressable>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Price Editor Form */}
+        <View style={styles.priceFormBox}>
+          <Text style={styles.formBoxTitle}>
+            {priceForm.id ? 'Modificar Presentación' : 'Añadir Nueva Presentación'}
+          </Text>
+
+          <View style={styles.segmentRow}>
+            {presentationTypes.map((type) => {
+              const active = priceForm.tipo === type.value;
+              return (
+                <Pressable
+                  key={type.value}
+                  onPress={() => updatePriceField('tipo', type.value)}
+                  style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+                >
+                  <Text style={[styles.segmentBtnText, active && styles.segmentBtnTextActive]}>
+                    {type.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <FormInput
+            label="Precio Público ($ MXN)"
+            value={priceForm.precio_publico}
+            onChangeText={(value) => updatePriceField('precio_publico', value)}
+            placeholder="Ej. 180"
+            keyboardType="numeric"
+          />
+
+          <View style={styles.formActionsRow}>
             <PrimaryButton
-              title="Cancelar Edición"
-              onPress={() => setPriceForm(initialPriceForm)}
-              variant="secondary"
+              title={
+                savingPrice
+                  ? 'Guardando...'
+                  : priceForm.id
+                    ? 'Actualizar Precio'
+                    : 'Guardar Presentación'
+              }
+              onPress={handleSavePrice}
+              disabled={savingPrice}
+              variant="amber"
+            />
+            {priceForm.id && (
+              <View style={{ marginTop: 8 }}>
+                <PrimaryButton
+                  title="Cancelar Edición"
+                  onPress={() => setPriceForm(initialPriceForm)}
+                  variant="outline"
+                />
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Purchases / Stock Lots Management */}
+      <View style={styles.luxuryPanel}>
+        <View style={styles.sectionHeaderBetween}>
+          <View style={styles.sectionHeaderLeft}>
+            <Feather name="database" size={16} color={colors.gold} />
+            <Text style={styles.sectionTitle}>Lotes & Frascos en Vault</Text>
+          </View>
+          <AnimatedPressable
+            onPress={() => setShowPurchaseDrawer((open) => !open)}
+            style={styles.toggleDrawerBtn}
+            scaleTo={0.92}
+          >
+            <Feather
+              name={showPurchaseDrawer ? 'minus' : 'plus'}
+              size={13}
+              color={colors.gold}
+            />
+            <Text style={styles.toggleDrawerBtnText}>
+              {showPurchaseDrawer ? 'Cerrar Registro' : 'Nueva Botella'}
+            </Text>
+          </AnimatedPressable>
+        </View>
+
+        {showPurchaseDrawer && (
+          <View style={styles.purchaseDrawer}>
+            <Text style={styles.drawerHeading}>Registrar Nueva Entrada de Frasco</Text>
+            <Text style={styles.drawerSub}>
+              Ingresa los mililitros y el costo para calcular rentabilidad y existencias.
+            </Text>
+
+            <FormInput
+              label="Mililitros Iniciales de la Botella"
+              value={purchaseForm.ml_iniciales}
+              onChangeText={(value) => updatePurchaseField('ml_iniciales', value)}
+              placeholder="Ej. 100"
+              keyboardType="numeric"
+            />
+            <FormInput
+              label="Costo de Adquisición ($ MXN)"
+              value={purchaseForm.costo_compra}
+              onChangeText={(value) => updatePurchaseField('costo_compra', value)}
+              placeholder="Ej. 2100"
+              keyboardType="numeric"
+            />
+
+            <View style={styles.switchWrapper}>
+              <Text style={styles.switchTitle}>¿Adquirido con Descuento Especial?</Text>
+              <Switch
+                value={purchaseForm.tuvo_descuento}
+                onValueChange={(val) => updatePurchaseField('tuvo_descuento', val)}
+                trackColor={{ false: colors.surfaceRaised, true: colors.gold }}
+                thumbColor={purchaseForm.tuvo_descuento ? colors.ink : colors.textMuted}
+              />
+            </View>
+
+            {purchaseForm.tuvo_descuento && (
+              <FormInput
+                label="Costo Final con Descuento ($ MXN)"
+                value={purchaseForm.costo_con_descuento}
+                onChangeText={(value) => updatePurchaseField('costo_con_descuento', value)}
+                placeholder="Ej. 1800"
+                keyboardType="numeric"
+              />
+            )}
+
+            <CalendarDatePicker
+              label="Fecha de Adquisición"
+              value={purchaseForm.fecha_compra}
+              onChange={(value) => updatePurchaseField('fecha_compra', value)}
+            />
+
+            <FormInput
+              label="Proveedor / Tienda"
+              value={purchaseForm.proveedor}
+              onChangeText={(value) => updatePurchaseField('proveedor', value)}
+              placeholder="Ej. Palacio de Hierro, Boutique Oficial..."
+            />
+
+            <FormInput
+              label="Notas Internas de Lote"
+              value={purchaseForm.notas}
+              onChangeText={(value) => updatePurchaseField('notas', value)}
+              placeholder="Número de batch, estado de caja, etc."
+              multiline
+            />
+
+            <PrimaryButton
+              title={savingPurchase ? 'Registrando...' : 'Confirmar Registro de Frasco'}
+              onPress={handleSavePurchase}
+              disabled={savingPurchase}
+              variant="copper"
             />
           </View>
         )}
-      </View>
 
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Feather name="plus-circle" size={16} color={colors.gold} />
-          <Text style={styles.panelTitle}>Registrar Lote / Compra</Text>
-        </View>
-        <Text style={styles.emptyText}>
-          Las compras son independientes del precio público. Permiten registrar el costo del lote y medir los mililitros disponibles.
-        </Text>
-        <FormInput
-          label="Mililitros Iniciales"
-          value={purchaseForm.ml_iniciales}
-          onChangeText={(value) => updatePurchaseField('ml_iniciales', value)}
-          placeholder="Ej. 100"
-          keyboardType="numeric"
-        />
-        <FormInput
-          label="Costo de Compra"
-          value={purchaseForm.costo_compra}
-          onChangeText={(value) => updatePurchaseField('costo_compra', value)}
-          placeholder="Ej. 2100"
-          keyboardType="numeric"
-        />
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>¿Tuvo Descuento?</Text>
-          <Switch
-            value={purchaseForm.tuvo_descuento}
-            onValueChange={(value) => updatePurchaseField('tuvo_descuento', value)}
-            thumbColor={purchaseForm.tuvo_descuento ? colors.text : colors.textSubtle}
-            trackColor={{ false: '#24262E', true: colors.gold }}
-          />
-        </View>
-        {purchaseForm.tuvo_descuento && (
-          <FormInput
-            label="Costo con Descuento"
-            value={purchaseForm.costo_con_descuento}
-            onChangeText={(value) => updatePurchaseField('costo_con_descuento', value)}
-            placeholder="Ej. 1800"
-            keyboardType="numeric"
-          />
-        )}
-        <CalendarDatePicker
-          label="Fecha de Compra"
-          value={purchaseForm.fecha_compra}
-          onChange={(value) => updatePurchaseField('fecha_compra', value)}
-        />
-        <FormInput
-          label="Proveedor"
-          value={purchaseForm.proveedor}
-          onChangeText={(value) => updatePurchaseField('proveedor', value)}
-          placeholder="Ej. Liverpool"
-        />
-        <FormInput
-          label="Notas del lote"
-          value={purchaseForm.notas}
-          onChangeText={(value) => updatePurchaseField('notas', value)}
-          placeholder="Comentarios adicionales"
-          multiline
-        />
-        <PrimaryButton
-          title={savingPurchase ? 'Registrando...' : 'Registrar Compra'}
-          onPress={handleSavePurchase}
-          disabled={savingPurchase}
-        />
-      </View>
-
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <Feather name="database" size={16} color={colors.gold} />
-          <Text style={styles.panelTitle}>Lotes con Stock Activo</Text>
-        </View>
-        {purchases.length === 0 ? (
-          <Text style={styles.emptyText}>No hay compras registradas para este perfume.</Text>
+        {/* Active Bottles List */}
+        {availablePurchases.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No hay botellas con stock activo en este momento.</Text>
+          </View>
         ) : (
           availablePurchases.map((purchase) => (
-            <View key={purchase.id} style={styles.purchaseItem}>
-              <InventoryPurchase
+            <View key={purchase.id} style={styles.lotCard}>
+              <InventoryPurchaseItem
                 purchase={purchase}
                 isEditing={stockEditForm.id === purchase.id}
                 editForm={stockEditForm}
@@ -445,46 +632,47 @@ export default function PerfumeDetailScreen({ route }) {
             </View>
           ))
         )}
-        {purchases.length > 0 && availablePurchases.length === 0 && (
-          <Text style={styles.emptyText}>No hay botellas con stock disponible.</Text>
+
+        {/* Exhausted Batches */}
+        {exhaustedPurchases.length > 0 && (
+          <View style={styles.exhaustedSection}>
+            <View style={styles.exhaustedHeader}>
+              <Feather name="archive" size={13} color={colors.textSubtle} />
+              <Text style={styles.exhaustedTitle}>
+                HISTORIAL DE FRASCOS AGOTADOS ({exhaustedPurchases.length})
+              </Text>
+            </View>
+
+            {exhaustedPurchases.map((purchase) => (
+              <View key={purchase.id} style={styles.exhaustedLotCard}>
+                <InventoryPurchaseItem
+                  purchase={purchase}
+                  isEditing={stockEditForm.id === purchase.id}
+                  editForm={stockEditForm}
+                  saving={savingStock}
+                  exhausted
+                  onEdit={() => handleEditStock(purchase)}
+                  onChange={(field, value) =>
+                    setStockEditForm((currentForm) => ({
+                      ...currentForm,
+                      [field]: value,
+                    }))
+                  }
+                  onCancel={() =>
+                    setStockEditForm({ id: '', ml_restantes: '', notas_ajuste_stock: '' })
+                  }
+                  onSave={handleSaveStock}
+                />
+              </View>
+            ))}
+          </View>
         )}
       </View>
-
-      {exhaustedPurchases.length > 0 && (
-        <View style={styles.panel}>
-          <View style={styles.panelHeader}>
-            <Feather name="archive" size={16} color={colors.textSubtle} />
-            <Text style={styles.panelTitle}>Lotes Agotados</Text>
-          </View>
-          {exhaustedPurchases.map((purchase) => (
-            <View key={purchase.id} style={styles.exhaustedItem}>
-              <InventoryPurchase
-                purchase={purchase}
-                isEditing={stockEditForm.id === purchase.id}
-                editForm={stockEditForm}
-                saving={savingStock}
-                exhausted
-                onEdit={() => handleEditStock(purchase)}
-                onChange={(field, value) =>
-                  setStockEditForm((currentForm) => ({
-                    ...currentForm,
-                    [field]: value,
-                  }))
-                }
-                onCancel={() =>
-                  setStockEditForm({ id: '', ml_restantes: '', notas_ajuste_stock: '' })
-                }
-                onSave={handleSaveStock}
-              />
-            </View>
-          ))}
-        </View>
-      )}
     </ScrollView>
   );
 }
 
-function InventoryPurchase({
+function InventoryPurchaseItem({
   purchase,
   isEditing,
   editForm,
@@ -498,28 +686,46 @@ function InventoryPurchase({
   const normalCost = Number(purchase.costo_compra) || 0;
   const discountedCost = Number(purchase.costo_con_descuento) || 0;
   const hasDiscount = !!purchase.tuvo_descuento && discountedCost > 0;
+  const remainingPercent = Math.min(
+    Math.max(
+      Math.round(((Number(purchase.ml_restantes) || 0) / (Number(purchase.ml_iniciales) || 1)) * 100),
+      0
+    ),
+    100
+  );
 
   if (isEditing) {
     return (
-      <View style={styles.inventoryEditBox}>
-        <Text style={styles.formTitle}>Ajustar Stock Disponible</Text>
+      <View style={styles.stockEditWrapper}>
+        <View style={styles.stockEditHeader}>
+          <Feather name="sliders" size={14} color={colors.gold} />
+          <Text style={styles.stockEditTitle}>Ajuste Manual de Inventario</Text>
+        </View>
+
         <FormInput
-          label="Mililitros Restantes"
+          label="Mililitros Restantes Reales"
           value={editForm.ml_restantes}
-          onChangeText={(value) => onChange('ml_restantes', value)}
-          placeholder="Ej. 35"
+          onChangeText={(val) => onChange('ml_restantes', val)}
+          placeholder="Ej. 45"
           keyboardType="numeric"
         />
+
         <FormInput
           label="Motivo del Ajuste"
           value={editForm.notas_ajuste_stock}
-          onChangeText={(value) => onChange('notas_ajuste_stock', value)}
-          placeholder="Ej. Conteo manual, evaporación..."
+          onChangeText={(val) => onChange('notas_ajuste_stock', val)}
+          placeholder="Ej. Conteo físico, decantación de prueba..."
         />
-        <View style={styles.stockEditActions}>
-          <PrimaryButton title="Guardar Cambios" onPress={onSave} disabled={saving} />
-          <View style={{ marginTop: 4 }}>
-            <PrimaryButton title="Cancelar" onPress={onCancel} variant="secondary" />
+
+        <View style={styles.stockEditBtnRow}>
+          <PrimaryButton
+            title="Guardar Ajuste"
+            onPress={onSave}
+            disabled={saving}
+            variant="amber"
+          />
+          <View style={{ marginTop: 6 }}>
+            <PrimaryButton title="Cancelar" onPress={onCancel} variant="outline" />
           </View>
         </View>
       </View>
@@ -527,37 +733,53 @@ function InventoryPurchase({
   }
 
   return (
-    <>
-      <View style={styles.rowTextGroup}>
-        <Text style={[styles.rowTitle, exhausted && { color: colors.textSubtle }]}>
-          {exhausted ? 'Agotado' : `${purchase.ml_restantes} ml / ${purchase.ml_iniciales} ml`}
-        </Text>
-        <Text style={styles.rowSubtext}>
-          Lote: {purchase.proveedor || 'Proveedor pendiente'}  ·  {formatDateValue(purchase.fecha_compra)}
-        </Text>
-        {!!purchase.notas_ajuste_stock && (
-          <Text style={[styles.rowSubtext, { fontStyle: 'italic', color: colors.gold }]}>
-            Nota de ajuste: {purchase.notas_ajuste_stock}
+    <View style={styles.lotRow}>
+      <View style={styles.lotInfoLeft}>
+        <View style={styles.lotTitleRow}>
+          <Text style={[styles.lotMlText, exhausted && styles.lotMlTextExhausted]}>
+            {exhausted ? '0 ml' : `${purchase.ml_restantes} ml`}
           </Text>
-        )}
-      </View>
-      <View style={styles.inventoryActions}>
-        {exhausted ? (
-          <Text style={styles.exhaustedBadge}>0 ml</Text>
-        ) : (
-          <View style={styles.costStack}>
-            <Text style={styles.costLabel}>Real: ${normalCost}</Text>
-            {hasDiscount && (
-              <Text style={styles.discountCostLabel}>Desc: ${discountedCost}</Text>
-            )}
+          <Text style={styles.lotTotalMl}>de {purchase.ml_iniciales} ml</Text>
+          {!exhausted && (
+            <View style={styles.percentBadge}>
+              <Text style={styles.percentBadgeText}>{remainingPercent}%</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Progress Bar */}
+        {!exhausted && (
+          <View style={styles.progressBarTrack}>
+            <View style={[styles.progressBarFill, { width: `${remainingPercent}%` }]} />
           </View>
         )}
-        <Pressable onPress={onEdit} style={styles.adjustStockButton}>
-          <Feather name="edit" size={11} color={colors.ink} style={{ marginRight: 4 }} />
-          <Text style={styles.adjustStockButtonText}>Ajustar</Text>
-        </Pressable>
+
+        <View style={styles.lotMetaRow}>
+          <Feather name="shield" size={10} color={colors.gold} />
+          <Text style={styles.lotMetaText}>
+            {purchase.proveedor || 'Proveedor Particular'} · {formatDateValue(purchase.fecha_compra)}
+          </Text>
+        </View>
+
+        {!!purchase.notas_ajuste_stock && (
+          <Text style={styles.adjustmentNote}>Ajuste: {purchase.notas_ajuste_stock}</Text>
+        )}
       </View>
-    </>
+
+      <View style={styles.lotActionsRight}>
+        <View style={styles.costBadge}>
+          <Text style={styles.costAmount}>
+            ${hasDiscount ? discountedCost : normalCost}
+          </Text>
+          {hasDiscount && <Text style={styles.costOriginal}>Desc. ${normalCost}</Text>}
+        </View>
+
+        <AnimatedPressable onPress={onEdit} style={styles.lotEditBtn} scaleTo={0.92}>
+          <Feather name="sliders" size={11} color={colors.ink} />
+          <Text style={styles.lotEditBtnText}>Ajustar</Text>
+        </AnimatedPressable>
+      </View>
+    </View>
   );
 }
 
@@ -568,333 +790,587 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.md,
-    paddingBottom: 80,
+    paddingBottom: 110, // Safe padding for bottom luxury dock
   },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.md,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+    overflow: 'hidden',
     marginBottom: spacing.md,
     ...shadow.card,
   },
-  bottleMark: {
-    width: 64,
-    height: 76,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+  heroImageContainer: {
+    width: '100%',
+    height: 240,
+    backgroundColor: '#FAF7F2',
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.glow,
-  },
-  bottleText: {
-    color: colors.ink,
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  heroImageFrame: {
-    width: 72,
-    height: 86,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    padding: 2,
-    backgroundColor: colors.surfaceRaised,
-    ...shadow.glow,
   },
   heroImage: {
     width: '100%',
     height: '100%',
-    borderRadius: radius.sm - 2,
-    backgroundColor: colors.background,
   },
-  heroInfo: {
+  imageOverlayGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    backgroundColor: 'transparent',
+  },
+  crestPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 90,
+    height: 90,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
+    backgroundColor: '#FAF7F2',
+  },
+  crestPlaceholderLetter: {
+    color: colors.gold,
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 4,
+    letterSpacing: 2,
+  },
+  heroDetails: {
+    padding: spacing.lg,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  brandBadge: {
+    color: colors.goldDark,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.8,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166, 106, 53, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 106, 53, 0.3)',
+  },
+  categoryBadgeText: {
+    color: colors.amber,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  perfumeTitle: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+    marginBottom: 8,
+  },
+  fragranceDescription: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  heroSpecsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(166, 136, 100, 0.15)',
+  },
+  specItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  specText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  errorAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(189, 83, 88, 0.1)',
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorAlertText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '700',
     flex: 1,
   },
-  kicker: {
-    color: colors.gold,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-  },
-  categoryText: {
-    color: colors.gold,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    marginTop: 3,
-  },
-  description: {
-    color: colors.textSubtle,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  messageBox: {
-    backgroundColor: colors.dangerSurface,
-    borderColor: colors.dangerLine,
+  pyramidPanel: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  stockPanel: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadow.glow,
-  },
-  stockLabel: {
-    color: colors.gold,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  stockValue: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  panel: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
     padding: spacing.md,
     marginBottom: spacing.md,
     ...shadow.card,
   },
-  panelHeader: {
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  noteLevel: {
+    marginBottom: 10,
+    backgroundColor: '#FAF7F2',
+    padding: 10,
+    borderRadius: radius.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.gold,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.12)',
+  },
+  noteHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: spacing.md,
+    marginBottom: 4,
   },
-  panelTitle: {
+  noteBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  noteLevelTitle: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  noteText: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  emptyText: {
-    color: colors.textSubtle,
     fontSize: 13,
     lineHeight: 18,
   },
-  rowItem: {
-    minHeight: 52,
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    marginBottom: 8,
+  stockGaugeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
-  rowTextGroup: {
+  stockInfoBlock: {
     flex: 1,
   },
-  purchaseItem: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
-    marginBottom: 8,
+  stockLabel: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  stockNumberRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  inventoryActions: {
-    alignItems: 'flex-end',
+    alignItems: 'baseline',
     gap: 6,
+    marginBottom: 4,
   },
-  costStack: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  costLabel: {
+  stockValue: {
     color: colors.text,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  discountCostLabel: {
-    color: colors.gold,
-    fontSize: 12,
+    fontSize: 34,
     fontWeight: '900',
   },
-  inventoryEditBox: {
-    flex: 1,
+  stockUnit: {
+    color: colors.goldDark,
+    fontSize: 16,
+    fontWeight: '700',
   },
-  stockEditActions: {
-    marginTop: 6,
+  stockBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    marginLeft: 6,
   },
-  rowTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800',
+  stockBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
-  rowSubtext: {
+  stockSub: {
     color: colors.textSubtle,
     fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
   },
-  rowValue: {
-    color: colors.gold,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  priceActions: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  actionButtonsInline: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  smallButton: {
-    width: 26,
-    height: 26,
-    backgroundColor: colors.gold,
-    borderRadius: radius.sm - 4,
+  stockIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF7F2',
+    borderWidth: 1.5,
+    borderColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
   },
-  smallButtonDark: {
-    width: 26,
-    height: 26,
-    backgroundColor: colors.surfaceCard,
+  luxuryPanel: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm - 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.card,
   },
-  adjustStockButton: {
-    backgroundColor: colors.gold,
-    borderRadius: radius.sm - 2,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adjustStockButtonText: {
-    color: colors.ink,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  cancelEdit: {
-    marginTop: 8,
-  },
-  exhaustedItem: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
-    marginBottom: 8,
+  sectionHeaderBetween: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    opacity: 0.6,
+    marginBottom: spacing.md,
   },
-  exhaustedBadge: {
-    color: colors.textSubtle,
-    backgroundColor: colors.surfaceCard,
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  toggleDrawerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: '#FAF7F2',
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 10,
+    borderColor: 'rgba(166, 136, 100, 0.35)',
+  },
+  toggleDrawerBtnText: {
+    color: colors.text,
+    fontSize: 11,
     fontWeight: '800',
   },
-  formTitle: {
-    color: colors.gold,
-    fontSize: 13,
+  emptyState: {
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: colors.textSubtle,
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  pricesGrid: {
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  priceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.2)',
+    padding: 12,
+  },
+  priceCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  presentationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  presentationTextGroup: {},
+  presentationTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  presentationSub: {
+    color: colors.textSubtle,
+    fontSize: 11,
+  },
+  priceCardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  presentationPrice: {
+    color: colors.amber,
+    fontSize: 17,
     fontWeight: '900',
+  },
+  priceButtonRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  priceMiniBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.xs,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceMiniBtnDark: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.xs,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceFormBox: {
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.25)',
+    padding: spacing.md,
+    marginTop: 6,
+  },
+  formBoxTitle: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    marginBottom: 10,
   },
   segmentRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    marginBottom: 12,
+  },
+  segmentBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.3)',
+    backgroundColor: '#FFFFFF',
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.petroleum,
+    borderColor: colors.petroleum,
+  },
+  segmentBtnText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  segmentBtnTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+  formActionsRow: {
+    marginTop: 6,
+  },
+  purchaseDrawer: {
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.3)',
+    padding: spacing.md,
     marginBottom: spacing.md,
   },
-  segment: {
-    minHeight: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
+  drawerHeading: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  segmentActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-    ...shadow.glow,
-  },
-  segmentText: {
+  drawerSub: {
     color: colors.textSubtle,
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    marginBottom: 12,
   },
-  segmentTextActive: {
-    color: colors.ink,
-  },
-  switchRow: {
-    minHeight: 48,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+  switchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginVertical: 10,
   },
-  switchLabel: {
+  switchTitle: {
     color: colors.textMuted,
     fontSize: 13,
+    fontWeight: '600',
+  },
+  lotCard: {
+    backgroundColor: '#FAF7F2',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.2)',
+    padding: 12,
+    marginBottom: 10,
+  },
+  lotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  lotInfoLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  lotTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginBottom: 4,
+  },
+  lotMlText: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  lotMlTextExhausted: {
+    color: colors.textSubtle,
+  },
+  lotTotalMl: {
+    color: colors.textSubtle,
+    fontSize: 11,
+  },
+  percentBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.xs,
+    backgroundColor: 'rgba(46, 125, 91, 0.12)',
+  },
+  percentBadgeText: {
+    color: colors.success,
+    fontSize: 10,
     fontWeight: '800',
+  },
+  progressBarTrack: {
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(22, 50, 58, 0.1)',
+    overflow: 'hidden',
+    marginVertical: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.amber,
+  },
+  lotMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  lotMetaText: {
+    color: colors.textSubtle,
+    fontSize: 11,
+  },
+  adjustmentNote: {
+    color: colors.amber,
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  lotActionsRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  costBadge: {
+    alignItems: 'flex-end',
+  },
+  costAmount: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  costOriginal: {
+    color: colors.textSubtle,
+    fontSize: 9,
+    textDecorationLine: 'line-through',
+  },
+  lotEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 136, 100, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.xs,
+    marginTop: 6,
+  },
+  lotEditBtnText: {
+    color: colors.text,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  stockEditWrapper: {
+    padding: 6,
+  },
+  stockEditHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  stockEditTitle: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  stockEditBtnRow: {
+    marginTop: 6,
+  },
+  exhaustedSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(166, 136, 100, 0.15)',
+  },
+  exhaustedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  exhaustedTitle: {
+    color: colors.textSubtle,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  exhaustedLotCard: {
+    backgroundColor: colors.surfaceSoft,
+    borderRadius: radius.sm,
+    padding: 10,
+    marginBottom: 6,
+    opacity: 0.7,
   },
 });
